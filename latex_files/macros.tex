@@ -1,0 +1,407 @@
+\usepackage{graphicx}
+\usepackage{apptools}
+\usepackage[flushleft]{threeparttable}
+\usepackage{array,booktabs,makecell}
+\usepackage{multirow}
+\usepackage{nicefrac}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{amsmath,amsfonts,bm,amssymb}
+\usepackage{dsfont}
+\usepackage{wrapfig}
+\usepackage{caption}
+% \usepackage{subcaption}
+\usepackage{siunitx}
+\usepackage{thm-restate}
+\usepackage{nccmath}
+\usepackage{empheq}
+\usepackage{bbm}
+\usepackage{tabularx}
+
+% algorithmic and algorithm already loaded by icml2026.sty
+% \usepackage{algorithmic}
+% \usepackage{algorithm}
+\usepackage{filecontents}
+
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% COLORS
+\usepackage{color}
+\usepackage{colortbl}
+\definecolor{bgcolor}{rgb}{0.76,0.88,0.50}
+\definecolor{bgcolor0}{rgb}{0.93,0.99,1}
+\definecolor{bgcolor1}{rgb}{0.8,1,1}
+\definecolor{bgcolor2}{rgb}{0.8,1,0.8}
+\definecolor{bgcolor3}{rgb}{0.50,0.90,0.50}
+\usepackage{tcolorbox}
+\usepackage{pifont}
+
+\definecolor{mydarkblue}{rgb}{0,0.16,0.54}
+\definecolor{mydarkgreen}{RGB}{39,130,67}
+\definecolor{mydarkorange}{RGB}{236,147,14}
+% \definecolor{myorange}{RGB}{230,120,20}
+% \definecolor{mydarkred}{RGB}{192,47,25}
+\definecolor{mydarkgreen}{RGB}{0,100,0}
+\definecolor{ruby}{RGB}{155,17,30}
+\definecolor{chili}{RGB}{191,0,0}
+\definecolor{sangria}{RGB}{146,0,10}
+\definecolor{burgundy}{RGB}{128,0,32}
+\definecolor{darkred}{RGB}{132,0,0} 
+\definecolor{cherry}{RGB}{192,0,0} 
+\definecolor{myaccent}{rgb}{0,0.45,0.45}
+\definecolor{anotherdarkred}{rgb}{0.45,0,0.05}
+\newcommand{\green}{\color{mydarkgreen}}
+\newcommand{\orange}{\color{mydarkorange}}
+\newcommand{\blue}{\color{mydarkblue}}
+\newcommand{\red}{\color{cherry}}
+% \newcommand{\red}{\color{anotherdarkred}}
+\newcommand{\highlightcolor}{\color{myaccent}}
+
+\newcommand{\markchanges}{}
+
+% todonotes already loaded in paper.tex
+% \usepackage[textsize=tiny]{todonotes}
+\newcommand{\arto}[1]{\todo[inline]{\textbf{Arto: }#1}}
+\newcommand{\zhiro}[1]{\todo[inline]{\textbf{Zhirayr: }#1}}
+\newcommand{\peter}[1]{\todo[inline]{\textbf{Peter: }#1}}
+
+\usepackage{xspace}
+\usepackage{relsize}
+\newcommand{\dataname}[1]{{\tt\footnotesize\color{blue}#1}\xspace}
+
+
+\newcommand{\ind}{\perp\!\!\!\!\perp}
+\newcommand{\norm}[1]{\left\| #1 \right\|}
+\newcommand{\sqnorm}[1]{\left\| #1 \right\|^2}
+\newcommand{\infnorm}[1]{\left\| #1 \right\|_{\infty}}
+\newcommand{\flr}[1]{\left\lfloor #1\right\rfloor} % floor
+\newcommand{\ceil}[1]{\left\lceil #1\right\rceil} % ceiling
+\newcommand{\lin}[1]{\left\langle #1\right\rangle} % inner product
+\newcommand{\inp}[2]{\left\langle#1,#2\right\rangle} % inner product
+\newcommand{\abs}[1]{\left| #1 \right|}
+
+\newcommand{\R}{\mathbb{R}} % reals
+\newcommand{\N}{\mathbb{N}} % natural numbers
+\newcommand{\Z}{\mathbb{Z}} % integers
+\newcommand{\E}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\Med}[1]{\mathrm{Med}\left[#1\right]}
+\newcommand{\Var}[1]{\mathrm{Var}\left(#1\right)}
+
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\progg}{\mathrm{prog}}
+
+\newcommand{\Exp}[1]{{\mathbb{E}}\left[#1\right]}
+\newcommand{\ExpSub}[2]{{\mathbb{E}}_{#1}\left[#2\right]}
+\newcommand{\ExpCond}[2]{{\mathbb{E}}\left[\left.#1\ \right\vert\ #2\right]}
+
+\newcommand{\Prob}[1]{\mathbb{P}\left(#1\right)} % probability
+\newcommand{\ProbCond}[2]{\mathbb{P}\left(#1\middle\vert#2\right)}
+
+% hat
+\newcommand{\hmu}{\hat{\mu}}
+
+% confidence
+\newcommand{\conf}{\mathrm{conf}}
+
+% caligraphic
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cI}{\mathcal{I}}
+\newcommand{\cJ}{\mathcal{J}}
+\newcommand{\cK}{\mathcal{K}}
+\newcommand{\cL}{\mathcal{L}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cO}{\mathcal{O}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cQ}{\mathcal{Q}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cU}{\mathcal{U}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\cW}{\mathcal{W}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+\newcommand{\cZ}{\mathcal{Z}}
+
+% bold letters
+\newcommand{\ba}{\bm{a}}
+\newcommand{\bb}{\bm{b}}
+\newcommand{\bc}{\bm{c}}
+\newcommand{\bd}{\bm{d}}
+\newcommand{\be}{\bm{e}}
+\newcommand{\bg}{\bm{g}}
+\newcommand{\bh}{\bm{h}}
+\newcommand{\bi}{\bm{i}}
+\newcommand{\bj}{\bm{j}}
+\newcommand{\bk}{\bm{k}}
+\newcommand{\bl}{\bm{l}}
+\newcommand{\bn}{\bm{n}}
+\newcommand{\bo}{\bm{o}}
+\newcommand{\bp}{\bm{p}}
+\newcommand{\bq}{\bm{q}}
+\newcommand{\br}{\bm{r}}
+\newcommand{\bs}{\bm{s}}
+\newcommand{\bt}{\bm{t}}
+\newcommand{\bu}{\bm{u}}
+\newcommand{\bv}{\bm{v}}
+\newcommand{\bw}{\bm{w}}
+\newcommand{\bx}{\bm{x}}
+\newcommand{\by}{\bm{y}}
+\newcommand{\bz}{\bm{z}}
+
+% bold matrices
+\newcommand{\mA}{\mathbf{A}}
+\newcommand{\mB}{\mathbf{B}}
+\newcommand{\mC}{\mathbf{C}}
+\newcommand{\mD}{\mathbf{D}}
+\newcommand{\mE}{\mathbf{E}}
+\newcommand{\mF}{\mathbf{F}}
+\newcommand{\mG}{\mathbf{G}}
+\newcommand{\mH}{\mathbf{H}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mJ}{\mathbf{J}}
+\newcommand{\mK}{\mathbf{K}}
+\newcommand{\mL}{\mathbf{L}}
+\newcommand{\mM}{\mathbf{M}}
+\newcommand{\mN}{\mathbf{N}}
+\newcommand{\mO}{\mathbf{O}}
+\newcommand{\mP}{\mathbf{P}}
+\newcommand{\mQ}{\mathbf{Q}}
+\newcommand{\mR}{\mathbf{R}}
+\newcommand{\mS}{\mathbf{S}}
+\newcommand{\mT}{\mathbf{T}}
+\newcommand{\mU}{\mathbf{U}}
+\newcommand{\mV}{\mathbf{V}}
+\newcommand{\mW}{\mathbf{W}}
+\newcommand{\mX}{\mathbf{X}}
+\newcommand{\mY}{\mathbf{Y}}
+\newcommand{\mZ}{\mathbf{Z}}
+
+\newcommand{\eqdef}{\coloneqq} 
+\newcommand{\Mod}[1]{\ (\mathrm{mod}\ #1)}
+\newcommand{\minimize}{\mathop{\mathrm{minimize}}}
+
+
+\newcommand{\tauavg}{\tau_{\mathrm{avg}}}
+
+\newcommand{\hnabla}{\widehat{\nabla}}
+
+
+\makeatletter
+\newcommand{\vast}{\bBigg@{4}}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% \def\<{\left\langle}
+% \def\>{\right\rangle}
+% \def\[{\left[}
+% \def\]{\right]}
+% \def\({\left(}
+% \def\){\right)}
+
+% The old colors
+% \newcommand{\crossmarkred}{{\color{mydarkred}\ding{56}}}
+% \newcommand{\checkmarkgreen}{\textbf{\color{mydarkgreen}\ding{52}}}
+
+% % No colors
+% \newcommand{\checkmarkgreen}{\textbf{\ding{52}}}
+% \newcommand{\crossmarkred}{\ding{56}}
+
+% Different colors
+% \definecolor{myblue}{rgb}{0.25,0.25,0.3}
+% \definecolor{myorange}{rgb}{0.25,0.25,0.3}
+
+\definecolor{myblue}{rgb}{0.3,0.25,0.2}
+\definecolor{myorange}{rgb}{0.3,0.25,0.2}
+\newcommand{\checkmarkgreen}{\textbf{\color{myblue}\ding{52}}}
+\newcommand{\crossmarkred}{{\color{myorange}\ding{56}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Algorithm names
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \newcommand{\algname}[1]{{\sf\footnotesize\red#1}\xspace}
+% \newcommand{\algname}[1]{{\sf\red\relscale{0.90}#1}\xspace}
+\newcommand{\algname}[1]{\text{\sf\relscale{0.93}#1}\xspace}
+\newcommand{\algnameS}[1]{\text{\sf\scriptsize\red#1}\xspace}
+% \newcommand{\algn}{{\sf\red\relscale{0.95}Ringleader ASGD}\xspace}
+\newcommand{\iasgd}{{\sf\relscale{0.95}IA\textsuperscript{2}SGD}\xspace}
+\newcommand{\iasgdtitle}{IA\textsuperscript{2}SGD}
+\newcommand{\ringleader}{\algname{Ringleader~ASGD}}
+\newcommand{\ringleadertitle}{Ringleader~ASGD}
+\newcommand{\malenia}{\algname{Malenia~SGD}}
+\newcommand{\maleniatitle}{Malenia~SGD}
+\newcommand{\herosgd}{\algname{Hero~SGD}}
+\newcommand{\herosgdtitle}{Hero~SGD}
+\newcommand{\minibatch}{\algname{Minibatch~SGD}}
+\newcommand{\minibatchtitle}{Minibatch~SGD}
+\newcommand{\naiveminibatch}{\algname{Naive~Minibatch~SGD}}
+\newcommand{\naiveminibatchtitle}{Naive~Minibatch~SGD}
+\newcommand{\asyncsgdtitle}{Asynchronous~SGD}
+\newcommand{\asyncsgd}{\algname{\asyncsgdtitle}}
+\newcommand{\naiveasyncsgdtitle}{Naive~Asynchronous~SGD}
+\newcommand{\naiveasyncsgd}{\algname{\naiveasyncsgdtitle}}
+\newcommand{\sag}{\algname{SAG}}
+\newcommand{\sagtitle}{SAG}
+\newcommand{\saga}{\algname{SAGA}}
+\newcommand{\sagatitle}{SAGA}
+\newcommand{\ringmaster}{\algname{Ringmaster~ASGD}}
+\newcommand{\ringmastertitle}{Ringmaster~ASGD}
+\newcommand{\rennalatitle}{Rennala~SGD}
+\newcommand{\rennala}{\algname{Rennala~SGD}}
+\newcommand{\sgd}{\algname{SGD}}
+\newcommand{\ata}{\algname{ATA}}
+\newcommand{\hogwild}{\algname{HOGWILD!}}
+\newcommand{\mvrtitle}{MVR}
+\newcommand{\mvr}{\algname{MVR}}
+\newcommand{\storm}{\algname{STORM}}
+\newcommand{\rennalamvrtitle}{{\red Rennala~MVR}}
+\newcommand{\rennalamvr}{\algname{\red Rennala~MVR}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{thmtools}
+\usepackage{thm-restate}
+\usepackage{mdframed}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% \theoremstyle{definition} % make theorems body non-italic
+\theoremstyle{plain} % make theorems body italic
+
+% Box style (used for boxed versions)
+\newmdenv[
+  font=\normalfont\bfseries,
+  linecolor=black,
+  linewidth=0.8pt,
+  topline=false,
+  bottomline=false,
+  leftline=false,
+  rightline=false,
+  backgroundcolor=gray!13,
+  skipabove=2pt,
+  skipbelow=2pt,
+  innertopmargin=-5pt,
+  innerbottommargin=4pt,
+  innerrightmargin=4pt,
+  innerleftmargin=4pt,
+]{myboxed}
+
+% Boxed versions of theorem and lemma
+\newmdtheoremenv[
+  font=\normalfont\bfseries,
+  linecolor=black,
+  linewidth=0.8pt,
+  topline=false,
+  bottomline=false,
+  leftline=false,
+  rightline=false,
+  backgroundcolor=gray!13,
+  skipabove=2pt,
+  skipbelow=2pt,
+  innertopmargin=-5pt,
+  innerbottommargin=4pt,
+  innerrightmargin=4pt,
+  innerleftmargin=4pt,
+]{boxedtheorem}[theorem]{Theorem}
+
+\newmdtheoremenv[
+  font=\normalfont\bfseries,
+  linecolor=black,
+  linewidth=0.8pt,
+  topline=false,
+  bottomline=false,
+  leftline=false,
+  rightline=false,
+  backgroundcolor=gray!13,
+  skipabove=2pt,
+  skipbelow=2pt,
+  innertopmargin=-5pt,
+  innerbottommargin=4pt,
+  innerrightmargin=4pt,
+  innerleftmargin=4pt,
+]{boxedlemma}[theorem]{Lemma}
+
+\newmdtheoremenv[
+  font=\normalfont\bfseries,
+  linecolor=black,
+  linewidth=0.8pt,
+  topline=false,
+  bottomline=false,
+  leftline=false,
+  rightline=false,
+  backgroundcolor=gray!13,
+  skipabove=2pt,
+  skipbelow=2pt,
+  innertopmargin=-5pt,
+  innerbottommargin=4pt,
+  innerrightmargin=4pt,
+  innerleftmargin=4pt,
+]{boxeddefinition}[theorem]{Definition}
+
+\newmdtheoremenv[
+  font=\normalfont\bfseries,
+  linecolor=black,
+  linewidth=0.8pt,
+  topline=false,
+  bottomline=false,
+  leftline=false,
+  rightline=false,
+  backgroundcolor=gray!13,
+  skipabove=2pt,
+  skipbelow=2pt,
+  innertopmargin=-5pt,
+  innerbottommargin=4pt,
+  innerrightmargin=4pt,
+  innerleftmargin=4pt,
+]{boxedassumption}[theorem]{Assumption}
+
+% Custom environments for restating (unboxed)
+\newtheorem{innercustomthm}{Theorem}
+\newenvironment{restate-theorem}[1]
+  {\renewcommand\theinnercustomthm{#1}\innercustomthm}
+  {\endinnercustomthm}
+
+\newtheorem{innercustomlemma}{Lemma}
+\newenvironment{restate-lemma}[1]
+  {\renewcommand\theinnercustomlemma{#1}\innercustomlemma}
+  {\endinnercustomlemma}
+
+\newtheorem{innercustomproposition}{Proposition}
+\newenvironment{restate-proposition}[1]
+  {\renewcommand\theinnercustomproposition{#1}\innercustomproposition}
+  {\endinnercustomproposition}
+
+% Boxed restated theorem and lemma
+\newenvironment{restate-boxedtheorem}[1]
+  {\renewcommand\theinnercustomthm{#1}\begin{myboxed}\begin{innercustomthm}}
+  {\end{innercustomthm}\end{myboxed}}
+
+\newenvironment{restate-boxedlemma}[1]
+  {\renewcommand\theinnercustomlemma{#1}\begin{myboxed}\begin{innercustomlemma}}
+  {\end{innercustomlemma}\end{myboxed}}
+
+% Sketch of Proof
+\newcommand*{\sketchproofname}{Sketch of Proof}
+\newenvironment{sketchproof}[1][\sketchproofname]
+  {\begin{proof}[#1]}
+  {\end{proof}}

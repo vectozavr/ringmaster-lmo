@@ -1,0 +1,254 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2025
+
+% The authors should use one of these tracks.
+% Before accepting by the NeurIPS conference, select one of the options below.
+% 0. "default" for submission
+ \usepackage{neurips_2025}
+% the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
+% 1. "main" option is used for the Main Track
+%  \usepackage[main]{neurips_2025}
+% 2. "position" option is used for the Position Paper Track
+%  \usepackage[position]{neurips_2025}
+% 3. "dandb" option is used for the Datasets & Benchmarks Track
+ % \usepackage[dandb]{neurips_2025}
+% 4. "creativeai" option is used for the Creative AI Track
+%  \usepackage[creativeai]{neurips_2025}
+% 5. "sglblindworkshop" option is used for the Workshop with single-blind reviewing
+ % \usepackage[sglblindworkshop]{neurips_2025}
+% 6. "dblblindworkshop" option is used for the Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop]{neurips_2025}
+
+% After being accepted, the authors should add "final" behind the track to compile a camera-ready version.
+% 1. Main Track
+ % \usepackage[main, final]{neurips_2025}
+% 2. Position Paper Track
+%  \usepackage[position, final]{neurips_2025}
+% 3. Datasets & Benchmarks Track
+ % \usepackage[dandb, final]{neurips_2025}
+% 4. Creative AI Track
+%  \usepackage[creativeai, final]{neurips_2025}
+% 5. Workshop with single-blind reviewing
+%  \usepackage[sglblindworkshop, final]{neurips_2025}
+% 6. Workshop with double-blind reviewing
+%  \usepackage[dblblindworkshop, final]{neurips_2025}
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote.
+% For workshops (5., 6.), the authors should add the name of the workshop, "\workshoptitle" command is used to set the workshop title.
+% \workshoptitle{WORKSHOP TITLE}
+
+% "preprint" option is used for arXiv or other preprint submissions
+ % \usepackage[preprint]{neurips_2025}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2025}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+% Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
+\title{Formatting Instructions For NeurIPS 2025}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  David S.~Hippocampus\thanks{Use footnote for providing further information
+    about author (webpage, alternative address)---\emph{not} for acknowledging
+    funding agencies.} \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  % examples of more authors
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
+
+\input{../macros.tex}
+
+\begin{document}
+
+
+\maketitle
+
+
+% \begin{abstract}
+%     The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
+%     both the left- and right-hand margins. Use 10~point type, with a vertical
+%     spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
+%     bold, and in point size 12. Two line spaces precede the abstract. The abstract
+%     must be limited to one paragraph.
+% \end{abstract}
+
+
+
+\section{Problem Setup}
+% 
+% 
+We consider the nonconvex optimization problem
+\begin{equation}\label{eq:problem}
+  \textstyle
+  \minimize_{x \in \R^d} 
+  \left\{ f(x) \coloneqq \mathbb{E}_{\xi \sim \cD}[f(x;\xi)] \right\} ,
+\end{equation}
+where $f(x; \xi)$ is the loss function evaluated on a data sample $\xi$ drawn from distribution~$\cD$, and the model is parameterized by $x \in \mathbb{R}^d$ with $d$ denoting the parameter dimensionality.
+% The goal is to learn a global model that minimizes the expected loss.
+
+We consider a distributed learning setting with $n$ workers, where each worker~$i$ has access to the same data distribution~$\cD$.
+This setting is common in data centers with either unified memory or uniformly partitioned data.
+Following the \textit{fixed computation model} \citep{mishchenko2022asynchronous}, we formalize the heterogeneous computation times as follows:
+% 
+\begin{equation}\label{eq:fixed_time}
+  \begin{minipage}{0.9\linewidth}
+    \centering
+    Each worker~$i$ requires $\tau_i$~seconds to compute one stochastic~gradient~$\nabla f(x;\xi)$.
+
+    Without loss of generality, we assume
+
+    $0 < \tau_1 \le \tau_2 \le \cdots \le \tau_n$.
+  \end{minipage}
+\end{equation}
+% 
+We assume instantaneous communication (zero latency) between workers and the server in both directions.
+This modeling simplification has been the standard assumption in prior work analyzing the time complexity of distributed optimization \citep{mishchenko2022asynchronous, koloskova2022sharper, tyurin2023optimal, maranjyan2025ringmaster}.
+
+\section{Lemmas}
+
+\begin{lemma}[\citet{maranjyan2025ringmaster} (Lemma 4.1)]
+    \label{ringmaster:lem:time_R}
+    Let the workers' computation times satisfy the \emph{fixed computation model} \eqref{ringmaster:eq:worker-time}.
+    Let $R$ be the delay threshold of \Cref{ringmaster:alg:ringmasternew} or \Cref{ringmaster:alg:ringmasternewstops}.
+    The time required to complete any $R$ consecutive iterate updates of \Cref{ringmaster:alg:ringmasternew} or \Cref{ringmaster:alg:ringmasternewstops} is at most
+    \begin{equation}\label{ringmaster:eq:time_R}
+       t(R) 
+       \eqdef 2 \min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( 1 + \frac{R}{m} \right).
+    \end{equation}
+\end{lemma}
+
+So the time complexity of the algorithm with fixed threshold $R$ to do $K$ iterations is
+$$
+    \frac{K}{R}\times t(R).
+$$
+% 
+\section{Time Complexity for Changing Threshold}
+
+In this section, we provide a formal derivation for the time complexity of the algorithm when the delay threshold $R_k$ is a non-decreasing function of the iteration index $k$.
+
+\begin{lemma}[Time Complexity for Adaptive Threshold]
+    \label{ringmaster:lem:time_RK}
+    Let the workers' computation times satisfy the \textit{fixed computation model} \eqref{eq:fixed_time}. 
+    Let $R_k$ be a non-decreasing delay threshold for $k \in \{0, 1, \dots, K-1\}$.
+    For each integer value $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, define the set of iterations $\mathcal{K}_r = \{k \mid \lfloor R_k \rfloor = r\}$.
+    The total time $T(K)$ required to complete $K$ iterations is bounded by
+    \begin{equation}
+        T(K) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ,
+    \end{equation}
+    where $t(r) = 2 \min_{m \in [n]} H_m \left( 1 + \frac{r}{m} \right)$ as defined in Lemma~\ref{ringmaster:lem:time_R}, and $H_m = \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1}$.
+\end{lemma}
+
+\begin{proof}
+    We partition the set of iterations $\{0, 1, \dots, K-1\}$ into disjoint blocks $\mathcal{K}_r$ based on the integer value of the threshold $R_k$. Since $R_k$ is non-decreasing, these blocks consist of consecutive iteration indices. For any specific block $\mathcal{K}_r$, the delay threshold satisfies $R_k \ge r$. 
+    
+    By Lemma~\ref{ringmaster:lem:time_R}, the time required to complete any $r$ consecutive updates when the threshold is at least $r$ is at most $t(r)$. We can cover the $|\mathcal{K}_r|$ iterations in block $r$ by dividing them into $N_b$ sub-blocks of size exactly $r$, where:
+    \begin{equation}
+        N_b = \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil .
+    \end{equation}
+    The last sub-block may contain fewer than $r$ updates, but its duration is still upper-bounded by $t(r)$, as the time to complete $r' < r$ updates is strictly less than the time to complete $r$ updates. Therefore, the time spent in each block $\mathcal{K}_r$ is bounded by $N_b \cdot t(r)$. Summing over all possible values of $r$ that the threshold takes during the $K$ iterations gives:
+    \begin{equation}
+        T(K) = \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} T(\mathcal{K}_r) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r).
+    \end{equation}
+    This completes the proof.
+\end{proof}
+
+\begin{corollary}[Time Complexity for Square-Root Threshold]
+    \label{ringmaster:cor:time_sqrt}
+    Let the delay threshold grow according to $R_k = \sqrt{k+1}$ for $k \ge 0$. Under the assumptions of Lemma~\ref{ringmaster:lem:time_RK}, the total time to reach $K$ iterations is 
+    \begin{equation}
+        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{K}{\sum_{i=1}^m \tau_i^{-1}} \right] \right) .
+    \end{equation}
+\end{corollary}
+
+\begin{proof}
+    We first determine the size of the blocks $|\mathcal{K}_r|$. For a given integer $r$, the condition $r \le \sqrt{k+1} < r+1$ implies $r^2 \le k+1 < (r+1)^2$. The range of iteration indices $k$ belonging to $\mathcal{K}_r$ is thus:
+    \begin{equation}
+        k \in \{r^2-1, r^2, \dots, (r+1)^2-2\}.
+    \end{equation}
+    The number of iterations in block $r$ is:
+    \begin{equation}
+        |\mathcal{K}_r| = \left( (r+1)^2 - 2 \right) - (r^2 - 1) + 1 = (r+1)^2 - r^2 = 2r + 1.
+    \end{equation}
+    Next, we substitute $|\mathcal{K}_r|$ into the summation from Lemma~\ref{ringmaster:lem:time_RK}. For $r \ge 1$, the ceiling term is:
+    \begin{equation}
+        \left\lceil \frac{2r+1}{r} \right\rceil = \left\lceil 2 + \frac{1}{r} \right\rceil = 3.
+    \end{equation}
+    The total time to reach $K$ iterations, where the maximum threshold reached is $r_{\max} = \lfloor \sqrt{K} \rfloor$, is:
+    \begin{equation}
+        T(K) \le \sum_{r=1}^{\sqrt{K}} 3 \cdot t(r) = 6 \sum_{r=1}^{\sqrt{K}} \min_{m \in [n]} \left[ H_m \left( 1 + \frac{r}{m} \right) \right].
+    \end{equation}
+    Using the property that the minimum of a sum is greater than or equal to the sum of the minimums (and picking a fixed $m^*$ to establish an upper bound):
+    \begin{align}
+        T(K) &\le 6 \min_{m \in [n]} \left[ \sum_{r=1}^{\sqrt{K}} H_m + \sum_{r=1}^{\sqrt{K}} \frac{H_m}{m} r \right] \\
+             &= 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{m} \frac{\sqrt{K}(\sqrt{K}+1)}{2} \right] \\
+             &\approx 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{2m} K \right].
+    \end{align}
+    Substituting $\frac{H_m}{m} = \left( \sum_{i=1}^m \frac{1}{\tau_i} \right)^{-1}$, we obtain the asymptotic bound:
+    \begin{equation}
+        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{K}{\sum_{i=1}^m \tau_i^{-1}} \right] \right).
+    \end{equation}
+\end{proof}
+
+\subsection{Comparison with Fixed Threshold}
+While a fixed threshold $R$ results in a time complexity of $O(K/R + K/m)$, the square-root growth $R_k = \sqrt{k+1}$ ensures that the "filtering overhead" (the first term) scales only as $O(\sqrt{K})$. This is particularly advantageous for large $K$, as the relative cost of ignoring outdated gradients vanishes:
+\begin{equation}
+    \lim_{K \to \infty} \frac{T(K)}{K} = \min_{m \in [n]} \frac{H_m}{m} = \frac{1}{\sum_{i=1}^n \tau_i^{-1}} .
+\end{equation}
+This confirms that the algorithm asymptotically achieves the full throughput of the distributed system, identical to standard Asynchronous SGD, while theoretically maintaining the benefits of a restricted delay during the initial training phase.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{
+\small
+\bibliographystyle{apalike}
+\bibliography{bib}
+}
+\newpage
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
