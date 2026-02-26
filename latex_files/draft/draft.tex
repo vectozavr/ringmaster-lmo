@@ -122,9 +122,8 @@
 % 
 We consider the nonconvex optimization problem
 \begin{equation}\label{eq:problem}
-  \textstyle
   \minimize_{x \in \R^d} 
-  \left\{ f(x) \coloneqq \mathbb{E}_{\xi \sim \cD}[f(x;\xi)] \right\} ,
+  \left\{ f(x) \coloneqq \ExpSub{\xi \sim \cD}{f(x;\xi)} \right\} ,
 \end{equation}
 where $f(x; \xi)$ is the loss function evaluated on a data sample $\xi$ drawn from distribution~$\cD$, and the model is parameterized by $x \in \mathbb{R}^d$ with $d$ denoting the parameter dimensionality.
 % The goal is to learn a global model that minimizes the expected loss.
@@ -138,23 +137,74 @@ Following the \textit{fixed computation model} \citep{mishchenko2022asynchronous
     \centering
     Each worker~$i$ requires $\tau_i$~seconds to compute one stochastic~gradient~$\nabla f(x;\xi)$.
 
-    Without loss of generality, we assume
-
-    $0 < \tau_1 \le \tau_2 \le \cdots \le \tau_n$.
+    Without loss of generality, we assume $0 < \tau_1 \le \tau_2 \le \cdots \le \tau_n$.
   \end{minipage}
 \end{equation}
 % 
 We assume instantaneous communication (zero latency) between workers and the server in both directions.
 This modeling simplification has been the standard assumption in prior work analyzing the time complexity of distributed optimization \citep{mishchenko2022asynchronous, koloskova2022sharper, tyurin2023optimal, maranjyan2025ringmaster}.
 
+
+\section{Algorithm}
+% 
+% 
+% 
+\begin{algorithm}[H]
+    \caption{\ringmaster (without calculation stops)}
+    \label{alg:ringmasternew}
+    \begin{algorithmic}[1]
+        \STATE \textbf{Input:} point $x^0 \in \R^d$, stepsize $\gamma > 0,$ delay threshold $R \in \N$
+        \STATE Set $k = 0$
+        \STATE Workers start computing stochastic gradients at $x^0$
+        \WHILE{not terminated}
+            \STATE Gradient $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
+            \highlightcolor
+            \IF{$\delta^k < R$}
+                \color{black}
+                \STATE Update the model:
+                    $x^{k+1} = x^{k} - \gamma \nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
+                \STATE Worker $i$ begins calculating 
+                    $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
+                \STATE Update the iteration number $k = k + 1$
+            \ELSE
+                \STATE Ignore the outdated gradient 
+                    $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
+                \STATE Worker $i$ begins calculating 
+                    $\nabla f\big(x^{k}; \xi^{k}_{i}\big)$
+            \ENDIF
+        \ENDWHILE
+    \end{algorithmic}
+\end{algorithm}
+% 
+% 
+\begin{algorithm}[H]
+    \caption{\ringmaster (with calculation stops)}
+    \label{alg:ringmasternewstops}
+    \begin{algorithmic}[1]
+        \STATE \textbf{Input:} point $x^0 \in \R^d$, stepsize $\gamma > 0$, delay threshold $R \in \N$
+        \STATE Set $k = 0$
+        \STATE Workers start computing stochastic gradients at $x^0$
+        \WHILE{not terminated}
+            \STATE {\highlightcolor Stop calculating stochastic gradients with delays $\geq R$, and start computing new ones at $x^k$ instead}
+            \STATE Gradient $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
+            \STATE Update the model:
+                $x^{k+1} = x^{k} - \gamma \nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
+            \STATE Worker $i$ begins calculating 
+                $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
+            \STATE Update the iteration number $k = k + 1$
+        \ENDWHILE
+    \end{algorithmic}
+\end{algorithm}
+% 
+% 
 \section{Lemmas}
 
-\begin{lemma}[\citet{maranjyan2025ringmaster} (Lemma 4.1)]
-    \label{ringmaster:lem:time_R}
-    Let the workers' computation times satisfy the \emph{fixed computation model} \eqref{ringmaster:eq:worker-time}.
-    Let $R$ be the delay threshold of \Cref{ringmaster:alg:ringmasternew} or \Cref{ringmaster:alg:ringmasternewstops}.
-    The time required to complete any $R$ consecutive iterate updates of \Cref{ringmaster:alg:ringmasternew} or \Cref{ringmaster:alg:ringmasternewstops} is at most
-    \begin{equation}\label{ringmaster:eq:time_R}
+\begin{lemma}[{\citet[Lemma 4.1]{maranjyan2025ringmaster}}]
+    \label{lem:time_R}
+    Let the workers' computation times satisfy the \emph{fixed computation model} \eqref{eq:fixed_time}.
+    Let $R$ be the delay threshold of \Cref{alg:ringmasternew} or \Cref{alg:ringmasternewstops}.
+    The time required to complete any $R$ consecutive iterate updates of \Cref{alg:ringmasternew} or \Cref{alg:ringmasternewstops} is at most
+    \begin{equation}\label{eq:time_R}
        t(R) 
        \eqdef 2 \min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( 1 + \frac{R}{m} \right).
     \end{equation}
@@ -170,7 +220,7 @@ $$
 In this section, we provide a formal derivation for the time complexity of the algorithm when the delay threshold $R_k$ is a non-decreasing function of the iteration index $k$.
 
 \begin{lemma}[Time Complexity for Adaptive Threshold]
-    \label{ringmaster:lem:time_RK}
+    \label{lem:time_RK}
     Let the workers' computation times satisfy the \textit{fixed computation model} \eqref{eq:fixed_time}. 
     Let $R_k$ be a non-decreasing delay threshold for $k \in \{0, 1, \dots, K-1\}$.
     For each integer value $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, define the set of iterations $\mathcal{K}_r = \{k \mid \lfloor R_k \rfloor = r\}$.
@@ -178,13 +228,14 @@ In this section, we provide a formal derivation for the time complexity of the a
     \begin{equation}
         T(K) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ,
     \end{equation}
-    where $t(r) = 2 \min_{m \in [n]} H_m \left( 1 + \frac{r}{m} \right)$ as defined in Lemma~\ref{ringmaster:lem:time_R}, and $H_m = \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1}$.
+    where $t(r) = 2 \min_{m \in [n]} H_m \left( 1 + \frac{r}{m} \right)$ as defined in Lemma~\ref{lem:time_R}, and $H_m = \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1}$.
 \end{lemma}
 
 \begin{proof}
-    We partition the set of iterations $\{0, 1, \dots, K-1\}$ into disjoint blocks $\mathcal{K}_r$ based on the integer value of the threshold $R_k$. Since $R_k$ is non-decreasing, these blocks consist of consecutive iteration indices. For any specific block $\mathcal{K}_r$, the delay threshold satisfies $R_k \ge r$. 
+    We partition the set of iterations $\{0, 1, \dots, K-1\}$ into disjoint blocks $\mathcal{K}_r$ based on the integer value of the threshold $R_k$. Since $R_k$ is non-decreasing, these blocks consist of consecutive iteration indices. For any specific block $\mathcal{K}_r$, the delay threshold satisfies $r\le R_k < r+1$. 
     
-    By Lemma~\ref{ringmaster:lem:time_R}, the time required to complete any $r$ consecutive updates when the threshold is at least $r$ is at most $t(r)$. We can cover the $|\mathcal{K}_r|$ iterations in block $r$ by dividing them into $N_b$ sub-blocks of size exactly $r$, where:
+    By Lemma~\ref{lem:time_R}, the time required to complete any $r$ consecutive updates when the threshold is $r$ is at most $t(r)$.
+    We can cover the $|\mathcal{K}_r|$ iterations in block $r$ by dividing them into $N_b$ sub-blocks of size exactly $r$, where:
     \begin{equation}
         N_b = \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil .
     \end{equation}
@@ -196,10 +247,10 @@ In this section, we provide a formal derivation for the time complexity of the a
 \end{proof}
 
 \begin{corollary}[Time Complexity for Square-Root Threshold]
-    \label{ringmaster:cor:time_sqrt}
-    Let the delay threshold grow according to $R_k = \sqrt{k+1}$ for $k \ge 0$. Under the assumptions of Lemma~\ref{ringmaster:lem:time_RK}, the total time to reach $K$ iterations is 
+    \label{cor:time_sqrt}
+    Let the delay threshold grow according to $R_k = \sqrt{k+1}$ for $k \ge 0$. Under the assumptions of Lemma~\ref{lem:time_RK}, the total time to reach $K$ iterations is 
     \begin{equation}
-        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{K}{\sum_{i=1}^m \tau_i^{-1}} \right] \right) .
+        T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
     \end{equation}
 \end{corollary}
 
@@ -212,32 +263,25 @@ In this section, we provide a formal derivation for the time complexity of the a
     \begin{equation}
         |\mathcal{K}_r| = \left( (r+1)^2 - 2 \right) - (r^2 - 1) + 1 = (r+1)^2 - r^2 = 2r + 1.
     \end{equation}
-    Next, we substitute $|\mathcal{K}_r|$ into the summation from Lemma~\ref{ringmaster:lem:time_RK}. For $r \ge 1$, the ceiling term is:
+    Next, we substitute $|\mathcal{K}_r|$ into the summation from Lemma~\ref{lem:time_RK}. For $r \ge 1$, the ceiling term is:
     \begin{equation}
         \left\lceil \frac{2r+1}{r} \right\rceil = \left\lceil 2 + \frac{1}{r} \right\rceil = 3.
     \end{equation}
     The total time to reach $K$ iterations, where the maximum threshold reached is $r_{\max} = \lfloor \sqrt{K} \rfloor$, is:
     \begin{equation}
-        T(K) \le \sum_{r=1}^{\sqrt{K}} 3 \cdot t(r) = 6 \sum_{r=1}^{\sqrt{K}} \min_{m \in [n]} \left[ H_m \left( 1 + \frac{r}{m} \right) \right].
+        T(K) \le \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} 3 \cdot t(r) = 6 \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \min_{m \in [n]} \left[ H_m \left( 1 + \frac{r}{m} \right) \right].
     \end{equation}
-    Using the property that the minimum of a sum is greater than or equal to the sum of the minimums (and picking a fixed $m^*$ to establish an upper bound):
+    Using the property that the minimum of a sum is greater than or equal to the sum of the minimums:
     \begin{align}
-        T(K) &\le 6 \min_{m \in [n]} \left[ \sum_{r=1}^{\sqrt{K}} H_m + \sum_{r=1}^{\sqrt{K}} \frac{H_m}{m} r \right] \\
-             &= 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{m} \frac{\sqrt{K}(\sqrt{K}+1)}{2} \right] \\
-             &\approx 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{2m} K \right].
+        T(K) &\le 6 \min_{m \in [n]} \left[ \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} H_m + \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \frac{H_m}{m} r \right] \\
+             &= 6 \min_{m \in [n]} \left[ H_m \lfloor \sqrt{K} \rfloor + \frac{H_m}{m} \frac{\lfloor \sqrt{K} \rfloor(\lfloor \sqrt{K} \rfloor+1)}{2} \right] \\
+             &\le 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{m} K \right].
     \end{align}
-    Substituting $\frac{H_m}{m} = \left( \sum_{i=1}^m \frac{1}{\tau_i} \right)^{-1}$, we obtain the asymptotic bound:
+    Thus,
     \begin{equation}
-        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{K}{\sum_{i=1}^m \tau_i^{-1}} \right] \right).
+        T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
     \end{equation}
 \end{proof}
-
-\subsection{Comparison with Fixed Threshold}
-While a fixed threshold $R$ results in a time complexity of $O(K/R + K/m)$, the square-root growth $R_k = \sqrt{k+1}$ ensures that the "filtering overhead" (the first term) scales only as $O(\sqrt{K})$. This is particularly advantageous for large $K$, as the relative cost of ignoring outdated gradients vanishes:
-\begin{equation}
-    \lim_{K \to \infty} \frac{T(K)}{K} = \min_{m \in [n]} \frac{H_m}{m} = \frac{1}{\sum_{i=1}^n \tau_i^{-1}} .
-\end{equation}
-This confirms that the algorithm asymptotically achieves the full throughput of the distributed system, identical to standard Asynchronous SGD, while theoretically maintaining the benefits of a restricted delay during the initial training phase.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
