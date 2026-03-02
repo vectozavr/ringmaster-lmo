@@ -216,71 +216,73 @@ $$
 $$
 % 
 \section{Time Complexity for Changing Threshold}
-
+% 
 In this section, we provide a formal derivation for the time complexity of the algorithm when the delay threshold $R_k$ is a non-decreasing function of the iteration index $k$.
-
+% 
 \begin{lemma}[Time Complexity for Adaptive Threshold]
     \label{lem:time_RK}
     Let the workers' computation times satisfy the \textit{fixed computation model} \eqref{eq:fixed_time}. 
     Let $R_k$ be a non-decreasing delay threshold for $k \in \{0, 1, \dots, K-1\}$.
     For each integer value $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, define the set of iterations $\mathcal{K}_r = \{k \mid \lfloor R_k \rfloor = r\}$.
     The total time $T(K)$ required to complete $K$ iterations is bounded by
-    \begin{equation}
+    \begin{equation*}
         T(K) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ,
-    \end{equation}
+    \end{equation*}
     where $t(r) = 2 \min_{m \in [n]} H_m \left( 1 + \frac{r}{m} \right)$ as defined in Lemma~\ref{lem:time_R}, and $H_m = \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1}$.
 \end{lemma}
-
+% 
+% 
 \begin{proof}
     We partition the set of iterations $\{0, 1, \dots, K-1\}$ into disjoint blocks $\mathcal{K}_r$ based on the integer value of the threshold $R_k$. Since $R_k$ is non-decreasing, these blocks consist of consecutive iteration indices. For any specific block $\mathcal{K}_r$, the delay threshold satisfies $r\le R_k < r+1$. 
     
     By Lemma~\ref{lem:time_R}, the time required to complete any $r$ consecutive updates when the threshold is $r$ is at most $t(r)$.
     We can cover the $|\mathcal{K}_r|$ iterations in block $r$ by dividing them into $N_b$ sub-blocks of size exactly $r$, where:
-    \begin{equation}
+    \begin{equation*}
         N_b = \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil .
-    \end{equation}
+    \end{equation*}
     The last sub-block may contain fewer than $r$ updates, but its duration is still upper-bounded by $t(r)$, as the time to complete $r' < r$ updates is strictly less than the time to complete $r$ updates. Therefore, the time spent in each block $\mathcal{K}_r$ is bounded by $N_b \cdot t(r)$. Summing over all possible values of $r$ that the threshold takes during the $K$ iterations gives:
-    \begin{equation}
+    \begin{equation*}
         T(K) = \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} T(\mathcal{K}_r) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r).
-    \end{equation}
+    \end{equation*}
     This completes the proof.
 \end{proof}
-
+% 
+% 
 \begin{corollary}[Time Complexity for Square-Root Threshold]
     \label{cor:time_sqrt}
     Let the delay threshold grow according to $R_k = \sqrt{k+1}$ for $k \ge 0$. Under the assumptions of Lemma~\ref{lem:time_RK}, the total time to reach $K$ iterations is 
-    \begin{equation}
+    \begin{equation*}
         T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
-    \end{equation}
+    \end{equation*}
 \end{corollary}
-
+% 
 \begin{proof}
     We first determine the size of the blocks $|\mathcal{K}_r|$. For a given integer $r$, the condition $r \le \sqrt{k+1} < r+1$ implies $r^2 \le k+1 < (r+1)^2$. The range of iteration indices $k$ belonging to $\mathcal{K}_r$ is thus:
-    \begin{equation}
+    \begin{equation*}
         k \in \{r^2-1, r^2, \dots, (r+1)^2-2\}.
-    \end{equation}
+    \end{equation*}
     The number of iterations in block $r$ is:
-    \begin{equation}
+    \begin{equation*}
         |\mathcal{K}_r| = \left( (r+1)^2 - 2 \right) - (r^2 - 1) + 1 = (r+1)^2 - r^2 = 2r + 1.
-    \end{equation}
+    \end{equation*}
     Next, we substitute $|\mathcal{K}_r|$ into the summation from Lemma~\ref{lem:time_RK}. For $r \ge 1$, the ceiling term is:
-    \begin{equation}
+    \begin{equation*}
         \left\lceil \frac{2r+1}{r} \right\rceil = \left\lceil 2 + \frac{1}{r} \right\rceil = 3.
-    \end{equation}
+    \end{equation*}
     The total time to reach $K$ iterations, where the maximum threshold reached is $r_{\max} = \lfloor \sqrt{K} \rfloor$, is:
-    \begin{equation}
+    \begin{equation*}
         T(K) \le \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} 3 \cdot t(r) = 6 \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \min_{m \in [n]} \left[ H_m \left( 1 + \frac{r}{m} \right) \right].
-    \end{equation}
+    \end{equation*}
     Using the property that the minimum of a sum is greater than or equal to the sum of the minimums:
-    \begin{align}
+    \begin{align*}
         T(K) &\le 6 \min_{m \in [n]} \left[ \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} H_m + \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \frac{H_m}{m} r \right] \\
              &= 6 \min_{m \in [n]} \left[ H_m \lfloor \sqrt{K} \rfloor + \frac{H_m}{m} \frac{\lfloor \sqrt{K} \rfloor(\lfloor \sqrt{K} \rfloor+1)}{2} \right] \\
              &\le 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{m} K \right].
-    \end{align}
+    \end{align*}
     Thus,
-    \begin{equation}
+    \begin{equation*}
         T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
-    \end{equation}
+    \end{equation*}
 \end{proof}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
