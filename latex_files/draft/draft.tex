@@ -297,4 +297,223 @@ In this section, we provide a formal derivation for the time complexity of the a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Convergence Analysis}
+
+We introduce the following notation: linear minimization oracle $$\texttt{lmo}(y) \eqdef \argmin_{x~:~\|x\| \le 1}\left\{\inp{y}{x} \right\}.$$
+
+\begin{definition}
+    \label{def:gen_smooth}
+    Let $f:\R^d\rightarrow\R$ be differentiable. Then $f$ is symmetric $(L_0, L_1)$-smooth if there exist $L_0,L_1 \ge 0$ such that for any $x, y \in \R^d$
+    \begin{equation}
+        \label{eq:gen_smooth}
+        \norm{\nabla f(x) - \nabla f(y)}_* \le \sup_{\theta \in [0,1]}\left(L_0 + L_1 \norm{\nabla f(\theta x +(1-\theta)y)}_*\right)\norm{x-y}.
+    \end{equation}
+\end{definition}
+
+\begin{lemma} 
+    \label{lem:gen_smooth}
+    Let $f$ be $(L_0, L_1)$-smooth. Then for any $x,y\in \R^d$ it holds 
+    \begin{equation}
+        f(x) \le f(y) + \inp{\nabla f(y)}{x-y} +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(y)}_*\right)\exp\left(L_1\norm{x-y}\right)\norm{x-y}^2
+    \end{equation}
+\end{lemma}
+\begin{algorithm}[H]
+    \caption{\ringmaster (without calculation stops)}
+    \label{alg:ringmaster_lmo}
+    \begin{algorithmic}[1]
+        \STATE \textbf{Input:} points $x^0, m^0 \in \R^d$, stepsize $\eta_k > 0,$ delay threshold $R_k \in \N$, momentum parameter $\alpha_k >0$.
+        \STATE Set $k = 0$
+        \STATE Workers start computing stochastic gradients at $x^0$
+        \WHILE{not terminated}
+            \STATE Gradient $g^k = \nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
+            \highlightcolor
+            \IF{$\delta^k < R_k$}
+                \color{black}
+                \STATE Update the mometum: $m^{k+1} = (1-\alpha_k)m^{k} + \alpha_k g^k$
+                \STATE Update the model:
+                    $x^{k+1} = x^{k} + \eta_k\texttt{lmo}(m^{k+1})$
+                \STATE Worker $i$ begins calculating 
+                    $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
+                \STATE Update the iteration number $k = k + 1$
+            \ELSE
+                \STATE Ignore the outdated gradient 
+                    $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
+                \STATE Worker $i$ begins calculating 
+                    $\nabla f\big(x^{k}; \xi^{k}_{i}\big)$
+            \ENDIF
+        \ENDWHILE
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{lemma}
+    \label{lem:descent_lemma}
+    Let $f$ be $(L_0, L_1)$-smooth. Then iterates of Algorithm~\ref{alg:ringmaster_lmo} satisfy 
+    \begin{equation}
+        \sum_{k=0}^{K-1}\eta_k\phi_k\norm{\nabla f(x^k)}_* \leq \Delta_0 + 2\sum^{K-1}_{k=0}\eta_k\norm{\hat{e}_{k+1}}_* +\frac{L_0}{2}\sum^{K-1}_{k=0}\exp\left(L_1\eta_k\right)\eta_k^2,
+    \end{equation}
+    where we define error term as $\hat{e}_{k+1} \eqdef m^{k+1} - \nabla f(x^k)$ and constatnt $\phi_k  = 1-\frac{L_1\eta_k}{2}\exp(L_1\eta_k)$. 
+\end{lemma}
+\begin{proof}
+    By Lemma~\ref{lem:gen_smooth}, we have 
+    \begin{eqnarray*}
+        f(x^{k+1}) &\le& f(x^k) + \inp{\nabla f(x^k)}{x^{k+1}-x^k}\\
+        && +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(x^k)}_*\right)\exp\left(L_1\norm{x^{k+1}-x^k}\right)\norm{x^{k+1}-x^k}^2\\
+        &\le& f(x^k) + \eta_k\inp{\nabla f(x^k)}{\texttt{lmo}(m^{k+1})} +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(x^k)}_*\right)\exp\left(L_1\eta_k\right)\eta_k^2\\
+        &=& f(x^k) + \eta_k\inp{\nabla f(x^k) - m^{k+1}}{\texttt{lmo}(m^{k+1})} + \eta_k\inp{m^{k+1}}{\texttt{lmo}(m^{k+1})} \\
+        && +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(x^k)}_*\right)\exp\left(L_1\eta_k\right)\eta_k^2\\
+        &\le& f(x^k) + \eta_k\norm{\nabla f(x^k) - m^{k+1}}_* - \eta_k\norm{m^{k+1}}_*  +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(x^k)}_*\right)\exp\left(L_1\eta_k\right)\eta_k^2\\
+        &\le& f(x^k) + 2\eta_k\norm{\nabla f(x^k) - m^{k+1}}_* - \eta_k\norm{\nabla f(x^k)}_*  +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(x^k)}_*\right)\exp\left(L_1\eta_k\right)\eta_k^2.
+    \end{eqnarray*}
+\end{proof}
+
+
+\begin{lemma}
+    \label{lem:error_bound}
+    Let $f$ be symmetric $(L_0, L_1)$-smooth. If stepsize $\eta_k$ is non-increasing and momentum parameter $\alpha_k$ defined as $\alpha_0 =1$ and $\alpha_k = \frac{1}{\sqrt{k}}$ for $k \ge 1$, then  the iterates of Algorithm~\ref{alg:ringmaster_lmo} satisfy 
+    \begin{eqnarray*}
+        \Exp{\norm{\hat{e}_{k+1}}_*} &\le&  \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
+        && + \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \Exp{\norm{\nabla f(x^t)}_*})\exp\left(L_1 R_t\eta_{t-1}\right)R_t\eta_{t-1}\\
+        && + {\color{red} \rho} \sigma\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2}.
+    \end{eqnarray*}
+\end{lemma}
+\begin{proof}
+    Using momentum update, we derive
+    \begin{eqnarray*}
+        \hat{e}_{k+1} &=& m^{k+1} - \nabla f(x^k)\\
+        &=& (1-\alpha_k)m^k +\alpha_k g^k - \nabla f(x^k)\\
+        &=& (1-\alpha_k)(m^k- \nabla f(x^{k-1})) + (1-\alpha_k)(\nabla f(x^{k-1}) - \nabla f(x^k)) +\alpha_k g^k - \alpha_k\nabla f(x^k)\\
+        &=& (1-\alpha_k)(m^k- \nabla f(x^{k-1})) + (1-\alpha_k)(\nabla f(x^{k-1}) - \nabla f(x^k))\\
+        && +\alpha_k (\nabla f(x^{k-\delta_k}) - \nabla f(x^k))  +\alpha_k(g^k - \nabla f(x^{k-\delta_k}).
+    \end{eqnarray*}
+
+Denoting $D_k \eqdef   \nabla f(x^{k-1}) - \nabla f(x^k)$, $S_k \eqdef \nabla f(x^{k-\delta_k}) - \nabla f(x^k)$, and $e_k = g^k - \nabla f(x^{k-\delta_k})$, we obtain
+\begin{eqnarray*}
+    \hat{e}_{k+1} &=& (1-\alpha_k) \hat{e}_{k} + (1-\alpha_k) D_k + \alpha_k S_k +\alpha_k e_k \\
+    &=&\prod_{t = 0}^{k}(1-\alpha_t) \hat{e}_{0} + \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j)(1-\alpha_t) D_t \\
+    && + \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t S_t + \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t.
+\end{eqnarray*}
+Setting $\alpha_k$ as $\alpha_0 = \alpha_1 =1$ and $\alpha_k = \frac{1}{\sqrt{k}}$ for $k \ge 1$, we have 
+\begin{eqnarray*}
+    \hat{e}_{k+1} &=& \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j)(1-\alpha_t) D_t  + \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t S_t + \sum_{t=0}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t\\
+    &=& \underbrace{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)(1-\alpha_t) D_t}_{\eqdef\cT_1} + \underbrace{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t S_t}_{\eqdef \cT_2} + \underbrace{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t}_{\eqdef \cT_3}.
+\end{eqnarray*}
+
+To continue the proof, we need to bound the norm of terms $\cT_1$, $\cT_2$ and $\cT_3$. By triangle inequality, we get 
+\begin{eqnarray*}
+    \norm{\cT_1}_* &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)(1-\alpha_t) \norm{D_t}_*\\
+    &=& \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \norm{ \nabla f(x^{t-1}) - \nabla f(x^t)}_*\\
+    &\le& \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\norm{\nabla f(x^t)}_*\right)\exp(L_1\eta_{t-1})\eta_{t-1}.
+\end{eqnarray*}
+
+Bounding $\norm{\cT_2}_*$, we obtain 
+\begin{eqnarray*}
+    \norm{\cT_2}_* &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t \norm{S_t}_*\\
+    &=& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t \norm{\nabla f(x^{t-\delta_t}) - \nabla f(x^t)}_*\\
+    &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \norm{\nabla f(x^t)}_*)\exp\left(L_1 \norm{x^t - x^{t-\delta_t}}\right)\norm{x^t - x^{t-\delta_t}}\\
+    &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \norm{\nabla f(x^t)}_*)\exp\left(L_1 \norm{\sum^{t-1}_{\tau = t-\delta_t}\eta_{\tau}\texttt{lmo}(m^{\tau+1})}\right)\norm{\sum^{t-1}_{\tau = t-\delta_t}\eta_{\tau}\texttt{lmo}(m^{\tau+1})}.
+\end{eqnarray*}
+ 
+Assuming that stepsize $\eta_k$ is non-increasing, we have 
+\begin{eqnarray*}
+    \norm{\cT_2}_* &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \norm{\nabla f(x^t)}_*)\exp\left(L_1 R_t\eta_{t-1}\right)R_t\eta_{t-1}.
+\end{eqnarray*}
+
+Bounding $\norm{\cT_3}_*$, we obtain 
+\begin{eqnarray*}
+    \norm{\cT_3}_* &\le& {\color{red} \rho} \norm{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t}_2.
+\end{eqnarray*}
+
+Taking expectation, we have 
+\begin{eqnarray*}
+    \Exp{\norm{\cT_3}_*} &\le& {\color{red} \rho} \Exp{\norm{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t}_2}\le {\color{red} \rho} \sqrt{\Exp{\norm{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t e_t}_2^2}}\\
+    &\le& {\color{red} \rho} \sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2 \Exp{\norm{e_t}_2^2}}\le{\color{red} \rho} \sigma\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2} 
+\end{eqnarray*}
+
+Thus, we have 
+\begin{eqnarray*}
+    \Exp{\norm{\hat{e}_{k+1}}_*} &\le&  \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
+    && + \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \Exp{\norm{\nabla f(x^t)}_*})\exp\left(L_1 R_t\eta_{t-1}\right)R_t\eta_{t-1}\\
+    && + {\color{red} \rho} \sigma\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2}.
+\end{eqnarray*}
+
+
+\end{proof}
+
+
+\paragraph{Standard Smoothness Case} We set $L_1 = 0$, which implies standard smoothness of $f$. Lemma~\ref{lem:descent_lemma} implies 
+\begin{eqnarray*}
+    \sum_{k=0}^{K-1} \eta_k \Exp{\norm{\nabla f(x^k)}_*} &\le& \Delta_0 + 2\sum^{K-1}_{k=0}\eta_k\Exp{\norm{\hat{e}_{k+1}}_*} +\frac{L_0}{2}\sum^{K-1}_{k=0}\eta_k^2
+\end{eqnarray*}
+
+Then, by Lemma~\ref{lem:error_bound}, 
+\begin{eqnarray*}
+    \sum_{k=0}^{K-1} \eta_k \Exp{\norm{\nabla f(x^k)}_*} &\le& \Delta_0  +\frac{L_0}{2}\sum^{K-1}_{k=0}\eta_k^2 + 2\sum^{K-1}_{k=0}\eta_k\sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) L_0\eta_{t-1}\\
+    && + 2\sum^{K-1}_{k=0}\eta_k\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t L_0 R_t\eta_{t-1}\\
+    && + 2{\color{red} \rho} \sigma\sum^{K-1}_{k=0}\eta_k\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2}
+\end{eqnarray*}
+
+Taking $R_t = \left\lfloor\frac{1}{\alpha_t}\right\rfloor$ and $\eta_k = \frac{\eta}{(k+1)^{\nicefrac{3}{4}}}$, we have 
+
+\begin{eqnarray*}
+    \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2 &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t^2 =  \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}}) t^{-1}\\
+    &\le& 2\exp\left(\frac{1}{1-\nicefrac{1}{2}}\right) \frac{1}{\sqrt{k+1}} \le \frac{18}{(k+1)^{\nicefrac{1}{2}}};\\
+    \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t  R_t\eta_{t-1} &=& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t \left\lfloor\frac{1}{\alpha_t}\right\rfloor\eta_{t-1} = \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}}) \frac{\left\lfloor\sqrt{t}\right\rfloor}{\sqrt{t}} \eta t^{-\nicefrac{3}{4}}\\
+    &\le& \eta \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}})  t^{-\nicefrac{3}{4}} \le 2\eta\exp\left(\frac{1}{1-\nicefrac{1}{2}}\right) (k+1)^{\nicefrac{1}{2} - \nicefrac{3}{4}}\\
+    &\le& \frac{18\eta}{(k+1)^{\nicefrac{1}{4}}};\\
+    \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j)\eta_{t-1} &=& \eta \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}})  t^{-\nicefrac{3}{4}}
+    \le  \frac{18\eta}{(k+1)^{\nicefrac{1}{4}}}.
+\end{eqnarray*}
+
+Thus, we obtain 
+\begin{eqnarray*}
+    \sum_{k=0}^{K-1} \eta_k \Exp{\norm{\nabla f(x^k)}_*} &\le& \Delta_0  +\frac{L_0}{2}\sum^{K-1}_{k=0}\eta_k^2 + 36L_0\eta\sum^{K-1}_{k=0}\frac{\eta_k}{(k+1)^{\nicefrac{1}{4}}}\\
+    && + 36L_0\eta\sum^{K-1}_{k=0}\frac{\eta_k}{(k+1)^{\nicefrac{1}{4}}}\\
+    && + 2{\color{red} \rho} \sigma\sum^{K-1}_{k=0}\eta_k\sqrt{\frac{18}{(k+1)^{\nicefrac{1}{2}}}}\\
+    &\le& \Delta_0  +\frac{L_0\eta^2}{2}\sum^{K-1}_{k=0}\frac{1}{(k+1)^{\nicefrac{3}{2}}} + 72 L_0\eta^2 \sum^{K-1}_{k=0}\frac{1}{k+1} + 9 {\color{red} \rho} \sigma \eta \sum^{K-1}_{k=0}\frac{1}{k+1}
+\end{eqnarray*}
+
+Bounding sums as follows 
+\begin{eqnarray*}
+    \sum^{K-1}_{k = 0} \frac{1}{(k+1)^q} &=& \sum^{K}_{k = 1}  \frac{1}{k^q} \le \begin{cases}
+        1 + \int\limits^{K}_1 \frac{dt}{t} = 1+  \log K, & \text{if } q =1\\ 
+        1 + \int\limits^{K}_1 \frac{dt}{t^q} = 1+  \frac{1}{q-1} - \frac{1}{K^{q-1}} \leq \frac{q}{q-1}, & \text{if } q \geq 1\
+    \end{cases},
+\end{eqnarray*}
+we have 
+\begin{eqnarray*}
+    \eta K^{\nicefrac{1}{4}}\min_{k \in \{0, \dots, K\}}\Exp{\norm{\nabla f(x^k)}_*} &\le& K\eta_K \min_{k \in \{0, \dots, K\}}\Exp{\norm{\nabla f(x^k)}_*} \le \sum_{k=0}^{K-1} \eta_k \Exp{\norm{\nabla f(x^k)}_*} \\
+    &\le& \Delta_0   + 75 L_0\eta^2 (1+\log K) + 9 {\color{red} \rho} \sigma \eta (1+\log K) ,
+\end{eqnarray*}
+where $K\ge 2$.
+
+Thus, we have 
+\begin{eqnarray*}
+    \min_{k \in \{0, \dots, K\}}\Exp{\norm{\nabla f(x^k)}_*} 
+    &\le& \frac{\nicefrac{\Delta_0 }{\eta}  + 75 L_0\eta (1+\log K) + 9 {\color{red} \rho} \sigma  (1+\log K)}{ K^{\nicefrac{1}{4}}},
+\end{eqnarray*}
+ and iteration complexity is defined as 
+ \begin{equation*}
+    K = \cO\left(\frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^4 }{\varepsilon^4}\log \frac{1}{\varepsilon}\right).
+ \end{equation*}
+
+ To compute time complexity, we define $R_k$ as
+ \begin{equation*}
+    R_k = \begin{cases}
+        1, &\text{if } k=0;\\
+        \lfloor\sqrt{k}\rfloor, &\text{if } k\ge 1;
+    \end{cases}
+ \end{equation*}
+
+Thus, by Corollary~\ref{cor:time_sqrt}, time complexity is defined as
+\begin{eqnarray*}
+    T(K) &=& \cO\( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \( \sqrt{K} + \frac{K}{m} \) \)\\
+    &=& \widetilde\cO\( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \( \frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^2 }{\varepsilon^2}+ \frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^4 }{m\varepsilon^4} \) \)
+\end{eqnarray*}
+
+
+
+
+
+
+
 \end{document}
