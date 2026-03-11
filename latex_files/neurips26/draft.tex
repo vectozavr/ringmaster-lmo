@@ -217,6 +217,7 @@ $$
 \subsection{Iteration Complexity}
 % 
 \begin{theorem}[Iteration Complexity; Proof in \Cref{proof:iteration_complexity}]\label{thm:iteration_complexity}
+    Take $\alpha_0 =1$ and $\alpha_k = \nicefrac{1}{\sqrt{k}}$, $R_k = \left\lfloor\nicefrac{1}{\alpha_k}\right\rfloor$ and $\eta_k = \nicefrac{\eta}{(k+1)^{\nicefrac{3}{4}}}$ for $k \ge 1$.
     The iteration complexity is
     \begin{equation*}
         K = \cO\left(\frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^4 }{\varepsilon^4} \( \log \frac{1}{\varepsilon} \)^4\right).

@@ -105,6 +105,75 @@ class RingmasterASGD(object):
     def get_time(self):
         return self._time
 
+@FactoryAsyncMaster.register("Momentum_Normalized_Ringmaster")
+class Momentum_Normalized_RingmasterASGD(object):
+    def __init__(self, transport, point, parameter_agnostic=False, threshold=None, gamma=None, alpha=None, seed=None):
+        self._transport = transport
+        self._transport.reset_all_nodes(0)
+        self._point = point
+        self._parameter_agnostic = parameter_agnostic
+        self._gamma = gamma
+        if parameter_agnostic:
+            self._alpha = 1
+        else:
+            self._threshold = threshold
+            self._alpha = alpha
+        self._seed = seed
+        self._time = 0
+        
+        self._momentum = 0.0
+        self._heap = []
+        self._iter = 0
+        self._number_of_nodes = self._transport.get_number_of_nodes()
+        self._delays = np.array([0] * self._number_of_nodes)
+        
+        for node_index in range(self._transport.get_number_of_nodes()):
+            available_time = self._transport.call_available_node_method(
+                self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+            heapq.heappush(self._heap, (available_time, node_index, self._iter))
+    
+    def step(self):
+        available_time, node_index, iter = heapq.heappop(self._heap)
+        assert available_time != np.inf
+        self._time = available_time
+
+        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+        self._momentum = self._alpha * stochastic_gradient + (1-self._alpha) * self._momentum
+        self._point = self._point - self._gamma * np.linalg.norm(self._momentum)
+
+        self._iter += 1
+        available_time = self._transport.call_available_node_method(
+            self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+        heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+        if self._parameter_agnostic:
+            self._alpha = 1 / np.sqrt(self._iter)
+            self._threshold = np.floor(np.sqrt(self._iter))
+            self._gamma /= (self._iter + 1) ** (3/4)
+
+        self._delays += 1 # increase the delay by 1 for all workers
+        self._delays[node_index] = 0
+        if np.max(self._delays) >= self._threshold:
+            indices = np.where(self._delays >= self._threshold)[0]
+            self._delays[indices] = 0
+            self._heap = [item for item in self._heap if item[1] not in indices]
+            heapq.heapify(self._heap)
+
+            for node_index in indices:
+                self._transport.ignore_node(self._time, node_index)
+                available_time = self._transport.call_available_node_method(
+                    self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+                heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+    def calculate_function(self):
+        return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
+                                                         point=self._point))
+        
+    def get_point(self):
+        return self._point
+    
+    def get_time(self):
+        return self._time
 
 @FactoryAsyncMaster.register("asynchronous_sgd_master")
 class AsynchronousSGD(object):

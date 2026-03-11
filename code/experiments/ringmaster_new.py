@@ -7,7 +7,7 @@ from tqdm import tqdm
 from function import StochasticTridiagonalQuadraticFunction
 from function import create_worst_case
 from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
-from asynchronous.algorithm import StochasticGradientNodeAlgorithm, AsynchronousSGD, RingmasterASGD, RennalaSGD
+from asynchronous.algorithm import StochasticGradientNodeAlgorithm, AsynchronousSGD, RingmasterASGD, Momentum_Normalized_RingmasterASGD, RennalaSGD
 from signature import Signature
 
 sns.set(style="whitegrid", context="talk", font_scale=1.2, palette=sns.color_palette("bright"), color_codes=False)
@@ -23,12 +23,14 @@ colors = [
     "#C00000",
     "#B8860B",
     "#006666",
+    "yellow"
 ]
 
 markers = [
     '*',
     '^',
     'H',
+    'd'
     ]
 
 def greed_search(gammas, max_delays, time_lim, optimizer_name):
@@ -98,7 +100,7 @@ assert len(delays) == num_nodes
 delays = np.array([1 + np.sqrt(i) for i in range(num_nodes)])
 # delays = np.array([1 + i for i in range(num_nodes)])
 # delays = np.array(2 + 20 * np.arange(num_nodes))
-np.random.shuffle(delays)
+# np.random.shuffle(delays)
 
 generator = np.random.default_rng(seed=5)
 # sigma_normal = 10
@@ -121,6 +123,34 @@ Optimizer setup
 point = np.zeros(dim)
 point[0] = np.sqrt(dim)
 
+
+# gammas = [5**i for i in range(-5, 5)]
+# max_delays = []
+# a = num_nodes
+# while a >= 1:
+#     max_delays.append(a)
+#     a //= 4
+# gamma, max_delay = greed_search(gammas=gammas, max_delays=max_delays, time_lim=time_lim, optimizer_name="RingmasterASGD")
+# print(gamma, max_delay)
+
+optimizer = Momentum_Normalized_RingmasterASGD(transport, point, parameter_agnostic=True, gamma=1)
+print(optimizer.__class__.__name__)
+
+x_0 = f(point) - f(analytical_solution)
+iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
+iteration_points = [x_0]
+iteration_times = [0]
+
+
+while iteration_times[-1] < time_lim:
+    optimizer.step()
+    iteration_points.append(f(optimizer.get_point()) - f(analytical_solution))
+    iteration_times.append(optimizer.get_time())
+    iteration_grads.append(np.linalg.norm(
+        function.gradient(optimizer.get_point())) ** 2)
+
+
+plt.semilogy(iteration_times, iteration_grads, label=r"Momentum Normalized Ringmaster ASGD: $\gamma=0.2$, $R=6$", linestyle='solid', marker=markers[3], markersize=18, markevery=max(1, len(iteration_times) // 10), color=colors[3])
 
 
 # gammas = [5**i for i in range(-5, 5)]
