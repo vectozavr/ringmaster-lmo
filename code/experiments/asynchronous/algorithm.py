@@ -114,6 +114,7 @@ class Momentum_Normalized_RingmasterASGD(object):
         self._parameter_agnostic = parameter_agnostic
         self._gamma = gamma
         if parameter_agnostic:
+            self._threshold = 1
             self._alpha = 1
         else:
             self._threshold = threshold
@@ -137,19 +138,17 @@ class Momentum_Normalized_RingmasterASGD(object):
         assert available_time != np.inf
         self._time = available_time
 
+        stepsize = self._gamma / ( (self._iter+1) ** 0.75 ) if self._parameter_agnostic else self._gamma
+
         stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+        # self._momentum = self._alpha**self._delays[node_index] * stochastic_gradient + (1-self._alpha) * self._momentum
         self._momentum = self._alpha * stochastic_gradient + (1-self._alpha) * self._momentum
-        self._point = self._point - self._gamma * np.linalg.norm(self._momentum)
+        self._point = self._point - stepsize * ( self._momentum / ( np.linalg.norm(self._momentum) + 1e-10 ) )
 
         self._iter += 1
         available_time = self._transport.call_available_node_method(
             self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
         heapq.heappush(self._heap, (available_time, node_index, self._iter))
-
-        if self._parameter_agnostic:
-            self._alpha = 1 / np.sqrt(self._iter)
-            self._threshold = np.floor(np.sqrt(self._iter))
-            self._gamma /= (self._iter + 1) ** (3/4)
 
         self._delays += 1 # increase the delay by 1 for all workers
         self._delays[node_index] = 0
@@ -164,6 +163,12 @@ class Momentum_Normalized_RingmasterASGD(object):
                 available_time = self._transport.call_available_node_method(
                     self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
                 heapq.heappush(self._heap, (available_time, node_index, self._iter))
+        
+        if self._parameter_agnostic:
+            # self._alpha = max(0.01, 1 / np.sqrt(self._iter))
+            self._alpha = 1 / np.sqrt(self._iter)
+            self._threshold = np.floor(np.sqrt(self._iter))
+        print(self._threshold)
 
     def calculate_function(self):
         return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
