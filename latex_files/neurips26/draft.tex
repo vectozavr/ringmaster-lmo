@@ -142,6 +142,8 @@ Following the \textit{fixed computation model} \citep{mishchenko2022asynchronous
 We assume instantaneous communication (zero latency) between workers and the server in both directions.
 This modeling simplification has been the standard assumption in prior work analyzing the time complexity of distributed optimization \citep{mishchenko2022asynchronous, koloskova2022sharper, tyurin2023optimal, maranjyan2025ringmaster}.
 
+\arto{Rewrite above}
+
 We introduce the following notation: linear minimization oracle
 $$
     \textrm{lmo}(y) \eqdef \argmin_{x~:~\|x\| \le 1} \inp{y}{x} .
@@ -210,6 +212,8 @@ $$
         \ENDWHILE
     \end{algorithmic}
 \end{algorithm}
+\arto{Should I do while $k\le K$?}
+\arto{Change highlight color}
 % 
 % 
 \section{Theoretical Analysis}
@@ -225,25 +229,43 @@ $$
 \end{theorem}
 
 \subsection{Time Complexity}
-We define $R_k$ as
-\begin{equation*}
-    R_k = \begin{cases}
-        1, &\text{if } k=0;\\
-        \lfloor\sqrt{k}\rfloor, &\text{if } k\ge 1;
-    \end{cases}
-\end{equation*}
-%
-\begin{theorem}[Time Complexity]\label{thm:time_complexity}
-    The time complexity is
-    \begin{eqnarray*}
-        T(K) &=& \cO\( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \( \sqrt{K} + \frac{K}{m} \) \)\\
-        &=& \widetilde\cO\( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \( \frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^2 }{\varepsilon^2}+ \frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^4 }{m\varepsilon^4} \) \) .
-    \end{eqnarray*}
+% 
+To analyze the wall-clock performance of \Cref{alg:ringmaster_lmo}, we express the system throughput in terms of the computation times of the $n$ workers.
+The next lemma translates the iteration count into physical time under the square-root delay-threshold schedule.
+% 
+\begin{lemma}[Time Complexity for Square-Root Threshold; Proof in \Cref{proof:sqrt_threshold}]\label{lemma:time_sqrt}
+    Let the delay threshold be $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
+    Under the fixed computation model \eqref{eq:fixed_time}, the wall-clock time needed to complete $K$ iterations satisfies
+    \begin{equation*}
+        T(K) = \mathcal{O}\left( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( \sqrt{K} + \frac{K}{m} \right) \right).
+    \end{equation*}
+\end{lemma}
+% 
+Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the total wall-clock complexity for reaching an $\varepsilon$-stationary point.
+% 
+\begin{theorem}[Total Wall-Clock Complexity]\label{thm:time_complexity}
+    To obtain an $\varepsilon$-approximate stationary point satisfying $\Exp{\|\nabla f(x^k)\|_*} \le \varepsilon$, the total wall-clock time is bounded by
+    \begin{equation*}
+        T(K) = \widetilde{\mathcal{O}}\left( \min_{m \in [n]} \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( \frac{\Phi^2}{\varepsilon^2} + \frac{\Phi^4}{m\varepsilon^4} \right) \right),
+    \end{equation*}
+    where $\Phi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta$.
 \end{theorem}
+% 
 \begin{proof}
-    The proof follows from \Cref{cor:time_sqrt} and \Cref{thm:iteration_complexity}.
+    By \Cref{thm:iteration_complexity}, the required number of iterations satisfies
+    $$
+        K = \widetilde{\mathcal{O}}(\Phi^4 \varepsilon^{-4}).
+    $$
+    Substituting this bound into \Cref{lemma:time_sqrt} gives
+    \begin{equation*}
+        \sqrt{K} = \widetilde{\mathcal{O}}\left(\frac{\Phi^2}{\varepsilon^2}\right) \quad \text{and} \quad \frac{K}{m} = \widetilde{\mathcal{O}}\left(\frac{\Phi^4}{m\varepsilon^4}\right).
+    \end{equation*}
+    Plugging these estimates into the bound of \Cref{lemma:time_sqrt} and absorbing logarithmic factors into the $\widetilde{\mathcal{O}}$ notation yields the claim.
 \end{proof}
-
+% 
+% 
+\paragraph{Discussion.}
+% 
 \ringmaster \citep{maranjyan2025ringmaster} has the following time complexity
 \begin{align*}
     \cO\left(\min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^{m} \frac{1}{\tau_{i}}\right)^{-1} \left(\frac{L \Delta}{\varepsilon^2} + \frac{\sigma^2 L \Delta}{m \varepsilon^4}\right) \right) .
@@ -467,92 +489,103 @@ Thus, we have
 \end{proof}
 % 
 % 
-\section{Time Complexity for Changing Threshold}
+\section{Time Complexity Analysis}
 % 
+We now convert iteration complexity into wall-clock complexity under the fixed computation model from \eqref{eq:fixed_time}.
+We begin with a basic bound for a fixed delay threshold.
 % 
-\begin{lemma}[{\citet[Lemma 4.1]{maranjyan2025ringmaster}}]
+\begin{lemma}[Duration of $R$ updates {\citep[Lemma 4.1]{maranjyan2025ringmaster}}]
     \label{lem:time_R}
-    Let the workers' computation times satisfy the \emph{fixed computation model} \eqref{eq:fixed_time}.
-    Let $R$ be the delay threshold of \Cref{alg:ringmaster_lmo} or \Cref{alg:ringmasternewstops}.
-    The time required to complete any $R$ consecutive iterate updates of \Cref{alg:ringmaster_lmo} or \Cref{alg:ringmasternewstops} is at most
+    Let $R$ be a fixed delay threshold.
+    Under the fixed computation model \eqref{eq:fixed_time}, the time required to complete any $R$ consecutive updates is at most
     \begin{equation}\label{eq:time_R}
-       t(R) 
-       \eqdef 2 \min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( 1 + \frac{R}{m} \right).
+       t(R) \coloneqq 2 \min_{m \in [n]} \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \left( 1 + \frac{R}{m} \right).
     \end{equation}
 \end{lemma}
 % 
-So the time complexity of the algorithm with fixed threshold $R$ to do $K$ iterations is
-$$
-    \frac{K}{R}\times t(R).
-$$
+We next extend this bound to adaptive, nondecreasing thresholds.
 % 
-In this section, we provide a formal derivation for the time complexity of the algorithm when the delay threshold $R_k$ is a non-decreasing function of the iteration index $k$.
-% 
-\begin{lemma}[Time Complexity for Adaptive Threshold]
-    \label{lem:time_RK}
-    Let the workers' computation times satisfy the \textit{fixed computation model} \eqref{eq:fixed_time}. 
-    Let $R_k$ be a non-decreasing delay threshold for $k \in \{0, 1, \dots, K-1\}$.
-    For each integer value $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, define the set of iterations $\mathcal{K}_r = \{k \mid \lfloor R_k \rfloor = r\}$.
-    The total time $T(K)$ required to complete $K$ iterations is bounded by
+\begin{lemma}[Time for General Adaptive Threshold]\label{lem:time_RK}
+    Let $R_k$ be a non-decreasing delay threshold.
+    For each integer $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, let $\mathcal{K}_r = \{k \mid \lfloor R_k \rfloor = r\}$ denote the block of iterations where the threshold is constant.
+    Then the time required by \Cref{alg:ringmaster_lmo} to complete its first $K$ updates satisfies
     \begin{equation*}
-        T(K) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ~,
+        T(K) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ~.
     \end{equation*}
-    where $t(r) = 2 \min_{m \in [n]} H_m \left( 1 + \frac{r}{m} \right)$ as defined in Lemma~\ref{lem:time_R}, and $H_m = \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1}$.
 \end{lemma}
 % 
-% 
 \begin{proof}
-    We partition the set of iterations $\{0, 1, \dots, K-1\}$ into disjoint blocks $\mathcal{K}_r$ based on the integer value of the threshold $R_k$. Since $R_k$ is non-decreasing, these blocks consist of consecutive iteration indices. For any specific block $\mathcal{K}_r$, the delay threshold satisfies $r\le R_k < r+1$. 
-    
-    By Lemma~\ref{lem:time_R}, the time required to complete any $r$ consecutive updates when the threshold is $r$ is at most $t(r)$.
-    We can cover the $|\mathcal{K}_r|$ iterations in block $r$ by dividing them into $N_b$ sub-blocks of size exactly $r$, where:
+    Partition the updates $\{0,1,\dots,K-1\}$ into disjoint blocks $\mathcal{K}_r$ according to the integer value of $\lfloor R_k \rfloor$.
+    Since $R_k$ is non-decreasing, each $\mathcal{K}_r$ is a contiguous block of iterations, and for every $k \in \mathcal{K}_r$ we have $r \le R_k < r+1$.
+
+    By \Cref{lem:time_R}, the time needed to complete any $r$ consecutive updates with threshold $r$ is at most $t(r)$.
+    The block $\mathcal{K}_r$ can be covered by
     \begin{equation*}
-        N_b = \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil .
+        N_b = \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil
     \end{equation*}
-    The last sub-block may contain fewer than $r$ updates, but its duration is still upper-bounded by $t(r)$, as the time to complete $r' < r$ updates is strictly less than the time to complete $r$ updates. Therefore, the time spent in each block $\mathcal{K}_r$ is bounded by $N_b \cdot t(r)$. Summing over all possible values of $r$ that the threshold takes during the $K$ iterations gives:
+    sub-blocks of size at most $r$.
+    The last sub-block may contain fewer than $r$ updates, but its duration is still bounded by $t(r)$.
+    Therefore, the total time spent on block $\mathcal{K}_r$ is at most $N_b t(r)$.
+    Summing over all threshold values attained during the first $K$ updates yields
     \begin{equation*}
         T(K) = \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} T(\mathcal{K}_r) \le \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil t(r) ~.
     \end{equation*}
-    This completes the proof.
 \end{proof}
+
+\subsection{Proof of \Cref{lemma:time_sqrt}}\label{proof:sqrt_threshold}
 % 
-% 
-\begin{corollary}[Time Complexity for Square-Root Threshold]
-    \label{cor:time_sqrt}
-    Let the delay threshold grow according to $R_k = \sqrt{k+1}$ for $k \ge 0$. Under the assumptions of Lemma~\ref{lem:time_RK}, the total time to reach $K$ iterations is 
+We now specialize \Cref{lem:time_RK} to the square-root threshold schedule.
+\begin{restate-lemma}{\ref{lemma:time_sqrt}}[Time Complexity for Square-Root Threshold]
+    Let the delay threshold be $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
+    Under the fixed computation model \eqref{eq:fixed_time}, the wall-clock time needed to complete $K$ iterations satisfies
     \begin{equation*}
-        T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
+        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \left( \sqrt{K} + \frac{K}{m} \right) \right).
     \end{equation*}
-\end{corollary}
+\end{restate-lemma}
 % 
 \begin{proof}
-    We first determine the size of the blocks $|\mathcal{K}_r|$. For a given integer $r$, the condition $r \le \sqrt{k+1} < r+1$ implies $r^2 \le k+1 < (r+1)^2$. The range of iteration indices $k$ belonging to $\mathcal{K}_r$ is thus:
+    Apply \Cref{lem:time_RK} with $R_k = \lfloor \sqrt{k+1} \rfloor$.
+    For a fixed integer $r \ge 1$, the condition $\lfloor \sqrt{k+1} \rfloor = r$ is equivalent to
+    $r \le \sqrt{k+1} < r+1$, or equivalently $r^2 \le k+1 < (r+1)^2$.
+    Hence,
     \begin{equation*}
         k \in \{r^2-1, r^2, \dots, (r+1)^2-2\}.
     \end{equation*}
-    The number of iterations in block $r$ is:
+    Therefore, the block size is
     \begin{equation*}
         |\mathcal{K}_r| = \left( (r+1)^2 - 2 \right) - (r^2 - 1) + 1 = (r+1)^2 - r^2 = 2r + 1.
     \end{equation*}
-    Next, we substitute $|\mathcal{K}_r|$ into the summation from Lemma~\ref{lem:time_RK}. For $r \ge 1$, the ceiling term is:
+    For $r \ge 1$, the ceiling factor in \Cref{lem:time_RK} satisfies
     \begin{equation*}
         \left\lceil \frac{2r+1}{r} \right\rceil = \left\lceil 2 + \frac{1}{r} \right\rceil = 3.
     \end{equation*}
-    The total time to reach $K$ iterations, where the maximum threshold reached is $r_{\max} = \lfloor \sqrt{K} \rfloor$, is:
+    Let $r_{\max} = \lfloor \sqrt{K} \rfloor$.
+    Using \Cref{lem:time_RK} and \Cref{eq:time_R}, we obtain
     \begin{equation*}
-        T(K) \le \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} 3 \cdot t(r) = 6 \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \min_{m \in [n]} \left[ H_m \left( 1 + \frac{r}{m} \right) \right].
+        T(K) \le \sum_{r=1}^{r_{\max}} 3\, t(r)
+        = 6 \sum_{r=1}^{r_{\max}} \min_{m \in [n]} \left[ \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \left( 1 + \frac{r}{m} \right) \right].
     \end{equation*}
-    Using the property that the minimum of a sum is greater than or equal to the sum of the minimums:
+    Since $\sum_r \min_m a_{r,m} \le \min_m \sum_r a_{r,m}$, it follows that
     \begin{align*}
-        T(K) &\le 6 \min_{m \in [n]} \left[ \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} H_m + \sum_{r=1}^{\lfloor \sqrt{K} \rfloor} \frac{H_m}{m} r \right] \\
-             &= 6 \min_{m \in [n]} \left[ H_m \lfloor \sqrt{K} \rfloor + \frac{H_m}{m} \frac{\lfloor \sqrt{K} \rfloor(\lfloor \sqrt{K} \rfloor+1)}{2} \right] \\
-             &\le 6 \min_{m \in [n]} \left[ H_m \sqrt{K} + \frac{H_m}{m} K \right].
+        T(K)
+        &\le 6 \min_{m \in [n]} \left[
+            \sum_{r=1}^{r_{\max}} \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1}
+            + \sum_{r=1}^{r_{\max}} \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \frac{r}{m}
+        \right] \\
+        &= 6 \min_{m \in [n]} \left[
+            \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} r_{\max}
+            + \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \frac{r_{\max}(r_{\max}+1)}{2m}
+        \right] \\
+        &\le 6 \min_{m \in [n]} \left[
+            \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \sqrt{K}
+            + \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \frac{K}{m}
+        \right].
     \end{align*}
-    Thus,
+    This proves that
     \begin{equation*}
-        T(K) = \mathcal{O}\( \min_{m \in [n]}  H_m \( \sqrt{K} + \frac{K}{m} \) \).
+        T(K) = \mathcal{O}\left( \min_{m \in [n]} \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1} \left( \sqrt{K} + \frac{K}{m} \right) \right).
     \end{equation*}
 \end{proof}
-
-
+% 
+% 
 \end{document}
