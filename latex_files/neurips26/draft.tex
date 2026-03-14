@@ -138,6 +138,7 @@ Following the \textit{fixed computation model} \citep{mishchenko2022asynchronous
     Without loss of generality, we assume $0 < \tau_1 \le \tau_2 \le \cdots \le \tau_n$.
   \end{minipage}
 \end{equation}
+\arto{make this a formal assumption}
 % 
 We assume instantaneous communication (zero latency) between workers and the server in both directions.
 This modeling simplification has been the standard assumption in prior work analyzing the time complexity of distributed optimization \citep{mishchenko2022asynchronous, koloskova2022sharper, tyurin2023optimal, maranjyan2025ringmaster}.
@@ -214,6 +215,7 @@ $$
 \end{algorithm}
 \arto{Should I do while $k\le K$?}
 \arto{Change highlight color}
+\arto{Should we keep only one? Maybe the first one - without stops and just mention that we can stop similar to \citet{maranjyan2025ringmaster}.}
 % 
 % 
 \section{Theoretical Analysis}
@@ -227,29 +229,38 @@ $$
         K = \cO\left(\frac{\left(\nicefrac{\Delta_0 }{\eta} + {\color{red} \rho} \sigma +  L_0\eta\right)^4 }{\varepsilon^4} \( \log \frac{1}{\varepsilon} \)^4\right).
      \end{equation*}
 \end{theorem}
-
+\arto{Can we have $R_k = \lfloor \sqrt{k+1} \rfloor$? Same for $\alpha_k$?}
 \subsection{Time Complexity}
 % 
-To analyze the wall-clock performance of \Cref{alg:ringmaster_lmo}, we express the system throughput in terms of the computation times of the $n$ workers.
-The next lemma translates the iteration count into physical time under the square-root delay-threshold schedule.
+We now analyze the wall-clock time complexity of \Cref{alg:ringmaster_lmo}.
+The following lemma gives the time required to complete $K$ iterations when using a square-root delay threshold.
 % 
 \begin{lemma}[Time Complexity for Square-Root Threshold; Proof in \Cref{proof:sqrt_threshold}]\label{lemma:time_sqrt}
-    Let the delay threshold be $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
+    Consider \Cref{alg:ringmaster_lmo} with delay threshold $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
     Under the fixed computation model \eqref{eq:fixed_time}, the wall-clock time needed to complete $K$ iterations satisfies
     \begin{equation*}
         T(K) = \mathcal{O}\left( \min_{m \in [n]}  \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( \sqrt{K} + \frac{K}{m} \right) \right).
     \end{equation*}
 \end{lemma}
+\arto{Change $R_k$?}
+% 
+\begin{proof}[Proof sketch]
+    Define $\mathcal{K}_r \coloneqq \{k \mid \lfloor R_k \rfloor = r\}$, namely the set of iterations for which the threshold equals $r$.
+    The schedule $R_k = \lfloor \sqrt{k+1} \rfloor$ partitions the $K$ iterations into these threshold-constant blocks.
+    For each block $\mathcal{K}_r$, we apply \Cref{lem:time_R}, which is exactly the fixed-threshold lemma of \citet{maranjyan2025ringmaster} restated in the appendix, and then sum over all values $r \le \lfloor \sqrt{K} \rfloor$.
+    Since $|\mathcal{K}_r| = 2r+1 = \mathcal{O}(r)$, each block contributes only a constant number of fixed-threshold chunks, which yields the claim.
+\end{proof}
 % 
 Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the total wall-clock complexity for reaching an $\varepsilon$-stationary point.
 % 
 \begin{theorem}[Total Wall-Clock Complexity]\label{thm:time_complexity}
-    To obtain an $\varepsilon$-approximate stationary point satisfying $\Exp{\|\nabla f(x^k)\|_*} \le \varepsilon$, the total wall-clock time is bounded by
+    The total wall-clock time for \Cref{alg:ringmaster_lmo} to reach an $\varepsilon$-stationary point is bounded by
     \begin{equation*}
         T(K) = \widetilde{\mathcal{O}}\left( \min_{m \in [n]} \left(\frac{1}{m} \sum_{i=1}^m \frac{1}{\tau_i}\right)^{-1} \left( \frac{\Phi^2}{\varepsilon^2} + \frac{\Phi^4}{m\varepsilon^4} \right) \right),
     \end{equation*}
     where $\Phi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta$.
 \end{theorem}
+\arto{Wall clock vs time. say somewhere that we use both...}
 % 
 \begin{proof}
     By \Cref{thm:iteration_complexity}, the required number of iterations satisfies
@@ -260,7 +271,7 @@ Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the
     \begin{equation*}
         \sqrt{K} = \widetilde{\mathcal{O}}\left(\frac{\Phi^2}{\varepsilon^2}\right) \quad \text{and} \quad \frac{K}{m} = \widetilde{\mathcal{O}}\left(\frac{\Phi^4}{m\varepsilon^4}\right).
     \end{equation*}
-    Plugging these estimates into the bound of \Cref{lemma:time_sqrt} and absorbing logarithmic factors into the $\widetilde{\mathcal{O}}$ notation yields the claim.
+    Plugging these estimates into the bound of \Cref{lemma:time_sqrt} yields the claim.
 \end{proof}
 % 
 % 
@@ -489,7 +500,8 @@ Thus, we have
 \end{proof}
 % 
 % 
-\section{Time Complexity Analysis}
+\section{Time Complexity Analysis for the Fixed-Time Case}
+\arto{name?}
 % 
 We now convert iteration complexity into wall-clock complexity under the fixed computation model from \eqref{eq:fixed_time}.
 We begin with a basic bound for a fixed delay threshold.
@@ -588,4 +600,245 @@ We now specialize \Cref{lem:time_RK} to the square-root threshold schedule.
 \end{proof}
 % 
 % 
+% 
+\section{Time Complexity Analysis for Arbitrarily Changing Computation Times}\label{sec:arbitrary_time}
+% 
+In practice, the \emph{fixed computation model} \eqref{eq:fixed_time} is often not satisfied.
+The compute power of devices can vary over time due to temporary disconnections, hardware or network delays, fluctuations in processing capacity, or other transient effects \citep{maranjyan2025mindflayer}.
+
+In this section we extend our theory to the more general setting of arbitrarily varying computation times.
+
+\subsection{Universal Computation Model}
+\label{sec:universal_computation_model}
+To formalize this setting, we adopt the \emph{universal computation model} introduced by \citet{tyurin2024tighttimecomplexitiesparallel}.
+
+For each worker $i \in [n]$, we define a \emph{compute power} function
+$$
+    p_i : \R_{+} \to \R_{+}~,
+$$
+assumed nonnegative and continuous almost everywhere (countably many jumps allowed).
+For any $T_2 \ge T_1 \ge 0$, the number of stochastic gradients \emph{completed} by worker $i$ on $[T_1, T_2]$ is
+$$
+    \#\text{gradients in }[T_1, T_2] \;=\; \left\lfloor \int_{T_1}^{T_2} p_i(t)\,dt \right\rfloor.
+$$
+Here, $p_i(t)$ models the worker's time-varying computational ability: smaller values over an interval yield fewer completed gradients, and larger values yield more.
+
+For instance, if worker $i$ remains idle for the first $T$ seconds and then becomes active, this corresponds to $p_i(t) = 0$ for $t \leq T$ and $p_i(t) > 0$ for $t > T$.
+More generally, $p_i(t)$ may follow periodic or irregular patterns, leading to bursts of activity, pauses, or chaotic changes in compute power.
+The process $p_i(t)$ may even be random, and all results hold conditional on the realized sample paths of $\{p_i\}$.
+
+The \emph{universal computation model} reduces to the \emph{fixed computation model} \eqref{eq:fixed_time} when $p_i(t) = \nicefrac{1}{\tau_i}$ for all $t \geq 0$ and $i \in [n]$.
+In this case,
+$$
+    \#\text{gradients in }[T_1, T_2] = \left\lfloor \frac{T_2 - T_1}{\tau_i} \right\rfloor,
+$$  
+meaning that worker $i$ computes one stochastic gradient after $T_1 + \tau_i$ seconds, two gradients after $T_1 + 2\tau_i$ seconds, and so on.
+\arto{rewrite all above}
+% 
+\subsection{Analysis}
+% 
+\begin{lemma}[Duration of $R$ updates {\citep[Lemma 5.1]{maranjyan2025ringmaster}}]
+    \label{lem:time_R_arbitrary}
+    Let the workers' computation times satisfy the \emph{universal computation model}.
+    Let $R$ be the delay threshold of \Cref{alg:ringmaster_lmo}.
+    Assume that some iteration starts at time $T_0$.
+    Starting from this iteration, the $R$ consecutive iterate updates of \Cref{alg:ringmaster_lmo} will be performed within the elapsed time
+    \begin{equation*} 
+           t(R;T_0) \eqdef \min \left\{t \geq 0 : \sum \limits_{i=1}^{n} \flr{\frac{1}{4} \int_{T_0}^{T_0 + t} p_i(\tau)\, d \tau} \geq R\right\}.
+    \end{equation*}
+\end{lemma}
+
+Then, under the \emph{universal computation model}, \ringmaster takes $T_{K}$ seconds for $K$ iterations, where $T_{K}$ is the $K$-th element of the following recursively defined sequence:
+\begin{align*}
+    T_{k} \eqdef \min \left\{T \geq 0 : \sum \limits_{i=1}^{n} \flr{\frac{1}{4} \int_{T_{k - 1}}^{T} p_i(\tau) d \tau} \geq R\right\} .
+\end{align*}
+for all $k \geq 1$ and $T_{0} = 0$.
+This result is from \citep{maranjyan2025ringmaster}.
+
+
+Now we want to find the time for changig threshold $R_k$ case.
+
+We next extend \Cref{lem:time_R_arbitrary} to non-decreasing adaptive thresholds.
+
+\begin{lemma}[Time for General Adaptive Threshold under the Universal Computation Model]
+    \label{lem:time_RK_arbitrary}
+    Let $R_k$ be a non-decreasing delay threshold.
+    For each integer $r \in \{\lfloor R_0 \rfloor, \dots, \lfloor R_{K-1} \rfloor\}$, let
+    $$
+        \mathcal{K}_r \coloneqq \{k \mid \lfloor R_k \rfloor = r\}
+    $$
+    denote the block of iterations where the threshold is constant.
+    For every such $r$, partition $\mathcal{K}_r$ into
+    $$
+        N_r \coloneqq \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil
+    $$
+    consecutive sub-blocks, each containing at most $r$ iterations.
+
+    Let $B \coloneqq \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} N_r$, and enumerate all these sub-blocks in chronological order.
+    Denote by $r_j$ the threshold value attached to the $j$-th sub-block, where $j = 1, \dots, B$.
+    Define the sequence $\{T_j\}_{j=0}^{B}$ recursively by
+    \begin{align*}
+        T_0 &\coloneqq 0, \\
+        T_j &\coloneqq T_{j-1} + t(r_j; T_{j-1}), \qquad j = 1, \dots, B.
+    \end{align*}
+    Then the wall-clock time needed to complete the first $K$ iterations of \Cref{alg:ringmaster_lmo} satisfies
+    \begin{equation*}
+        T(K) \le T_B.
+    \end{equation*}
+\end{lemma}
+
+\begin{proof}
+    Partition the iterations $\{0,1,\dots,K-1\}$ into disjoint blocks $\mathcal{K}_r$ according to the integer value of $\lfloor R_k \rfloor$.
+    Since $R_k$ is non-decreasing, each $\mathcal{K}_r$ is a contiguous block of iterations.
+
+    Fix some $r$ and consider one of its sub-blocks.
+    By construction, this sub-block contains at most $r$ consecutive iterations, and throughout this sub-block the threshold satisfies
+    $$
+        r \le R_k < r+1.
+    $$
+    Therefore, using threshold $r$ can only make the algorithm more conservative than the actual threshold schedule on this sub-block.
+    Hence \Cref{lem:time_R_arbitrary} implies that, if this sub-block starts at time $T$, then all its iterations are completed within time at most $t(r;T)$.
+
+    Now enumerate all sub-blocks in chronological order and let $r_j$ be the threshold associated with the $j$-th one.
+    Starting from time $T_0 = 0$, the first sub-block is completed by time at most
+    $$
+        T_1 = T_0 + t(r_1;T_0).
+    $$
+    Repeating the same argument inductively, if the first $j-1$ sub-blocks are completed by time at most $T_{j-1}$, then the $j$-th sub-block is completed by time at most
+    $$
+        T_j = T_{j-1} + t(r_j;T_{j-1}).
+    $$
+    After all
+    $$
+        B = \sum_{r=\lfloor R_0 \rfloor}^{\lfloor R_{K-1} \rfloor} \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil
+    $$
+    sub-blocks are processed, all first $K$ iterations have been completed. Therefore,
+    \begin{equation*}
+        T(K) \le T_B.
+    \end{equation*}
+\end{proof}
+
+This is the arbitrary-time analogue of \Cref{lem:time_RK} from the fixed computation model.
+It reduces the analysis of a changing threshold schedule to a recursion over threshold-constant sub-blocks, where each sub-block is controlled by the fixed-threshold bound \Cref{lem:time_R_arbitrary}.
+
+\begin{lemma}[Square-Root Threshold under the Universal Computation Model]
+    \label{lem:time_sqrt_arbitrary}
+    Let $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
+    Under the universal computation model, the wall-clock time needed to complete the first $K$ iterations of \Cref{alg:ringmaster_lmo} is bounded by
+    \begin{equation*}
+        T(K) \le S_{3\lfloor \sqrt{K} \rfloor},
+    \end{equation*}
+    where the sequence $\{S_j\}_{j=0}^{3\lfloor \sqrt{K} \rfloor}$ is defined recursively as
+    \begin{align*}
+        S_0 &\coloneqq 0, \\
+        S_j &\coloneqq S_{j-1} + t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right), \qquad j = 1, \dots, 3\lfloor \sqrt{K} \rfloor .
+    \end{align*}
+\end{lemma}
+
+\begin{proof}
+    We apply \Cref{lem:time_RK_arbitrary} with $R_k = \lfloor \sqrt{k+1} \rfloor$.
+    For every integer $r \ge 1$, the condition $\lfloor \sqrt{k+1} \rfloor = r$ is equivalent to
+    $$
+        r^2 \le k+1 < (r+1)^2,
+    $$
+    hence
+    $$
+        \mathcal{K}_r = \{r^2-1, r^2, \dots, (r+1)^2-2\},
+    $$
+    and therefore
+    \begin{equation*}
+        |\mathcal{K}_r| = (r+1)^2-r^2 = 2r+1.
+    \end{equation*}
+    Consequently,
+    \begin{equation*}
+        \left\lceil \frac{|\mathcal{K}_r|}{r} \right\rceil
+        =
+        \left\lceil \frac{2r+1}{r} \right\rceil
+        =
+        3.
+    \end{equation*}
+    Thus each threshold level $r$ contributes exactly three sub-blocks of size at most $r$.
+
+    Let $r_{\max} \coloneqq \lfloor \sqrt{K} \rfloor$.
+    Enumerating all sub-blocks in chronological order gives exactly $3r_{\max}$ sub-blocks, with threshold values
+    $$
+        1,1,1,2,2,2,\dots,r_{\max},r_{\max},r_{\max}.
+    $$
+    Therefore, the recursion from \Cref{lem:time_RK_arbitrary} becomes
+    \begin{align*}
+        S_0 &\coloneqq 0, \\
+        S_j &\coloneqq S_{j-1} + t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right), \qquad j = 1, \dots, 3r_{\max},
+    \end{align*}
+    and the resulting completion time satisfies
+    \begin{equation*}
+        T(K) \le S_{3r_{\max}} = S_{3\lfloor \sqrt{K} \rfloor}.
+    \end{equation*}
+\end{proof}
+
+\begin{theorem}[Final Arbitrary-Time Wall-Clock Complexity]
+    \label{thm:time_arbitrary}
+    Consider \Cref{alg:ringmaster_lmo} with
+    $$
+        \alpha_0 = 1,\qquad
+        \alpha_k = \frac{1}{\sqrt{k}},\qquad
+        R_k = \lfloor \sqrt{k+1} \rfloor,
+        \qquad
+        \eta_k = \frac{\eta}{(k+1)^{3/4}}
+    $$
+    for $k \ge 1$.
+    Let
+    \begin{equation*}
+        K_{\varepsilon}
+        =
+        \widetilde{\mathcal{O}}\left(\frac{\Phi^4}{\varepsilon^4}\right)
+    \end{equation*}
+    be the iteration complexity from \Cref{thm:iteration_complexity}.
+    Then, under the universal computation model, the wall-clock time needed to reach an $\varepsilon$-stationary point satisfies
+    \begin{equation*}
+        T_{\varepsilon}
+        \le
+        S_{3\lfloor \sqrt{K_{\varepsilon}} \rfloor}
+        =
+        S_{\widetilde{\mathcal{O}}(\Phi^2/\varepsilon^2)},
+    \end{equation*}
+    where the sequence $\{S_j\}$ is defined recursively by
+    \begin{align*}
+        S_0 &\coloneqq 0, \\
+        S_j &\coloneqq S_{j-1} + t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right).
+    \end{align*}
+\end{theorem}
+
+\begin{proof}
+    By \Cref{thm:iteration_complexity}, the method reaches an $\varepsilon$-stationary point within
+    \begin{equation*}
+        K_{\varepsilon}
+        =
+        \widetilde{\mathcal{O}}\left(\frac{\Phi^4}{\varepsilon^4}\right)
+    \end{equation*}
+    iterations.
+    Applying \Cref{lem:time_sqrt_arbitrary} with $K = K_{\varepsilon}$ yields
+    \begin{equation*}
+        T_{\varepsilon}
+        \le
+        S_{3\lfloor \sqrt{K_{\varepsilon}} \rfloor}.
+    \end{equation*}
+    Since $\sqrt{K_{\varepsilon}} = \widetilde{\mathcal{O}}(\Phi^2/\varepsilon^2)$, the claim follows.
+\end{proof}
+
+\paragraph{Comparison with \ringmaster.}
+The fixed-threshold arbitrary-time result from \citet{maranjyan2025ringmaster} controls progress through blocks of a single threshold $R$, leading to a recursion over roughly $K/R$ blocks of size $R$.
+In contrast, with the square-root schedule $R_k = \lfloor \sqrt{k+1} \rfloor$, \Cref{lem:time_sqrt_arbitrary} shows that the first $K$ iterations are covered by only
+\begin{equation*}
+    3\lfloor \sqrt{K} \rfloor
+\end{equation*}
+adaptive sub-blocks.
+Thus our schedule replaces the fixed-threshold decomposition by an adaptive one whose depth grows only as $\mathcal{O}(\sqrt{K})$.
+After substituting the iteration complexity bound, this yields an arbitrary-time wall-clock recursion of length
+\begin{equation*}
+    \widetilde{\mathcal{O}}\left(\frac{\Phi^2}{\varepsilon^2}\right),
+\end{equation*}
+whereas the fixed-threshold \ringmaster analysis scales with the number of fixed-$R$ blocks.
+This captures the advantage of allowing the delay threshold to increase with $k$: the method adapts to larger delays over time without requiring a single globally tuned threshold.
+
+
 \end{document}
