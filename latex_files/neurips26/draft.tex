@@ -237,6 +237,7 @@ $$
         = \cO\left(\frac{\Psi^4}{\varepsilon^4} \( \log \frac{1}{\varepsilon} \)^4\right).
      \end{equation*}
 \end{theorem}
+\arto{$R_k$ doens't have to be an integer}
 \arto{Can we have $R_k = \lfloor \sqrt{k+1} \rfloor$? Same for $\alpha_k$?}
 \subsection{Time Complexity}
 % 
@@ -707,6 +708,8 @@ This assumption includes \Cref{assump:fixed_time} as a special case: if $p_i(s)=
 \end{equation*}
 % 
 \subsection{Analysis}
+\arto{Section name?}
+% 
 % 
 \begin{lemma}[Duration of $R$ updates under the Universal Computation Model {\citep[Lemma 5.1]{maranjyan2025ringmaster}}]
     \label{lem:time_R_arbitrary}
@@ -894,7 +897,214 @@ It reduces the changing-threshold analysis to a sequence of threshold-constant s
     Since $\sqrt{K_{\varepsilon}} = \widetilde{\mathcal{O}}(\Psi^2/\varepsilon^2)$, the claim follows.
 \end{proof}
 
-\paragraph{Comparison with \ringmaster.}
+\subsection{Comparison Under Additional Regularity Assumptions}
+\label{sec:comparison_under_regular_assumptions}
+
+The comparison above treats the functions $t(R;T)$ as completely arbitrary.
+If we are willing to assume that block durations are stable under batching and under shifts in the starting time, then the recursion from \Cref{thm:time_arbitrary} simplifies substantially and the wall-clock behavior of our method becomes very close to that of fixed-threshold \ringmaster.
+
+\begin{assumption}[Bounded Batching Overhead]
+    \label{assump:batching_overhead}
+    There exists a constant $C_{\rm blk} \ge 1$ such that the following holds.
+    For every integer $R \ge 1$, every integer $q \ge 1$, and every starting time $T_0 \ge 0$, define
+    \begin{equation*}
+        T_{j+1} \coloneqq T_j + t(R;T_j),
+        \qquad j = 0,\dots,q-1.
+    \end{equation*}
+    Then
+    \begin{equation*}
+        \sum_{j=0}^{q-1} t(R;T_j)
+        \le
+        C_{\rm blk}\, t(qR;T_0).
+    \end{equation*}
+\end{assumption}
+
+Intuitively, \Cref{assump:batching_overhead} says that splitting $qR$ updates into $q$ consecutive blocks of size $R$ does not increase the elapsed time by more than a constant factor.
+This is reasonable when worker speeds do not change too much over the time window covered by a few consecutive blocks, so that batching several smaller blocks together does not create a dramatic speedup.
+
+\begin{assumption}[Bounded Start-Time Distortion]
+    \label{assump:start_time_distortion}
+    There exists a constant $C_{\rm time} \ge 1$ such that
+    \begin{equation*}
+        t(R;T)
+        \le
+        C_{\rm time}\, t(R;0)
+    \end{equation*}
+    for every integer $R \ge 1$ and every $T \ge 0$.
+\end{assumption}
+
+Intuitively, \Cref{assump:start_time_distortion} says that the main determinant of the block duration is its size $R$, while the precise starting time affects this duration only up to a constant factor.
+This may hold in practice when the system runs in a roughly stationary regime, or more generally when the worker speeds stay within a bounded envelope over time.
+For example, the stronger condition
+\begin{equation*}
+    \frac{q_-}{\tau_i}
+    \le
+    p_i(s)
+    \le
+    \frac{q_+}{\tau_i},
+    \qquad i \in [n], \quad s \ge 0,
+\end{equation*}
+implies \Cref{assump:start_time_distortion} with $C_{\rm time} = q_+/q_-$.
+
+The next lemma shows that \Cref{assump:start_time_distortion} already removes the recursive dependence on the intermediate starting times.
+\begin{lemma}[Simplified Formula Under Bounded Start-Time Distortion]
+    \label{lem:simplified_formula_start_time}
+    Under \Cref{assump:start_time_distortion}, the square-root schedule satisfies
+    \begin{equation*}
+        T(K)
+        \le
+        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K} \rfloor} t(r;0).
+    \end{equation*}
+    Consequently,
+    \begin{equation*}
+        T_{\varepsilon}
+        \le
+        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K_{\varepsilon}} \rfloor} t(r;0).
+    \end{equation*}
+\end{lemma}
+
+\begin{proof}
+    By \Cref{lem:time_sqrt_arbitrary},
+    \begin{equation*}
+        T(K)
+        \le
+        S_{3\lfloor \sqrt{K} \rfloor},
+    \end{equation*}
+    where
+    \begin{equation*}
+        S_j
+        =
+        S_{j-1}
+        +
+        t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right).
+    \end{equation*}
+    Under \Cref{assump:start_time_distortion}, each increment is bounded by
+    \begin{equation*}
+        t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right)
+        \le
+        C_{\rm time}\,
+        t\!\left(\left\lceil \frac{j}{3} \right\rceil; 0\right).
+    \end{equation*}
+    Summing over $j = 1,\dots,3\lfloor \sqrt{K} \rfloor$ gives
+    \begin{equation*}
+        T(K)
+        \le
+        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K} \rfloor} t(r;0).
+    \end{equation*}
+    The bound for $T_{\varepsilon}$ follows by taking $K = K_{\varepsilon}$.
+\end{proof}
+
+Under both assumptions, the square-root schedule has the same overall wall-clock scaling as a fixed-threshold \ringmaster run with threshold $R \asymp \sqrt{K}$.
+\begin{proposition}[Same Wall-Clock Scaling as Fixed-Threshold \ringmaster]
+    \label{prop:same_scaling_ringmaster}
+    Assume \Cref{assump:batching_overhead,assump:start_time_distortion}.
+    Let $R_K \coloneqq \lfloor \sqrt{K} \rfloor$.
+    Then
+    \begin{equation*}
+        T(K)
+        \le
+        3 C_{\rm blk} C_{\rm time}^{2}\,
+        R_K\, t(R_K;0).
+    \end{equation*}
+    Moreover, if \ringmaster is run with the fixed threshold $R \equiv R_K$, then
+    \begin{equation*}
+        T^{\rm Ringmaster}(K)
+        \le
+        C_{\rm time}\left\lceil \frac{K}{R_K} \right\rceil t(R_K;0)
+        =
+        \mathcal{O}\left(
+            C_{\rm time}\sqrt{K}\, t(\sqrt{K};0)
+        \right).
+    \end{equation*}
+    Therefore, both methods have the same wall-clock scaling
+    \begin{equation*}
+        \mathcal{O}\left(
+            \sqrt{K}\, t(\sqrt{K};0)
+        \right)
+    \end{equation*}
+    up to constant factors.
+\end{proposition}
+
+\begin{proof}
+    Let $r_{\max} \coloneqq \lfloor \sqrt{K} \rfloor$.
+    For each $r = 1,\dots,r_{\max}$, the square-root schedule produces exactly three sub-blocks with threshold $r$.
+    Let $U_{r,0}$ be the starting time of the first such sub-block, and define
+    \begin{equation*}
+        U_{r,j+1} \coloneqq U_{r,j} + t(r;U_{r,j}),
+        \qquad j = 0,1.
+    \end{equation*}
+    By \Cref{assump:batching_overhead} with $q = 3$,
+    \begin{equation*}
+        \sum_{j=0}^{2} t(r;U_{r,j})
+        \le
+        C_{\rm blk}\, t(3r;U_{r,0}).
+    \end{equation*}
+    Applying \Cref{assump:start_time_distortion} gives
+    \begin{equation*}
+        \sum_{j=0}^{2} t(r;U_{r,j})
+        \le
+        C_{\rm blk} C_{\rm time}\, t(3r;0).
+    \end{equation*}
+
+    Next, define
+    \begin{equation*}
+        T_1 \coloneqq t(r;0),
+        \qquad
+        T_2 \coloneqq T_1 + t(r;T_1).
+    \end{equation*}
+    By the general inequality
+    \begin{equation*}
+        t(3r;0)
+        \le
+        t(r;0) + t(r;T_1) + t(r;T_2),
+    \end{equation*}
+    together with \Cref{assump:start_time_distortion}, we obtain
+    \begin{equation*}
+        t(3r;0)
+        \le
+        3 C_{\rm time}\, t(r;0)
+        \le
+        3 C_{\rm time}\, t(r_{\max};0),
+    \end{equation*}
+    where the last step uses the monotonicity of $t(R;0)$ in $R$.
+    Therefore, the total contribution of level $r$ is at most
+    \begin{equation*}
+        3 C_{\rm blk} C_{\rm time}^{2}\, t(r_{\max};0).
+    \end{equation*}
+    Summing over $r = 1,\dots,r_{\max}$ yields
+    \begin{equation*}
+        T(K)
+        \le
+        3 C_{\rm blk} C_{\rm time}^{2}\,
+        r_{\max}\, t(r_{\max};0).
+    \end{equation*}
+
+    For fixed-threshold \ringmaster with $R \equiv r_{\max}$, partition the first $K$ iterations into
+    \begin{equation*}
+        \left\lceil \frac{K}{r_{\max}} \right\rceil
+    \end{equation*}
+    consecutive blocks.
+    Under \Cref{assump:start_time_distortion}, each such block takes at most
+    \begin{equation*}
+        C_{\rm time}\, t(r_{\max};0)
+    \end{equation*}
+    time, so
+    \begin{equation*}
+        T^{\rm Ringmaster}(K)
+        \le
+        C_{\rm time}\left\lceil \frac{K}{r_{\max}} \right\rceil t(r_{\max};0)
+        =
+        \mathcal{O}\left(
+            C_{\rm time}\sqrt{K}\, t(\sqrt{K};0)
+        \right).
+    \end{equation*}
+    This proves the claim.
+\end{proof}
+
+The previous proposition shows that, under these two assumptions, the wall-clock conversion from iterations to time is essentially the same for our method and for fixed-threshold \ringmaster.
+Any remaining difference between the final $\varepsilon$-time bounds then comes from the corresponding iteration-complexity estimates, not from the universal computation model itself.
+
+\paragraph{Comparison without additional assumptions.}
 For \ringmaster, the iteration complexity in \citet{maranjyan2025ringmaster} is
 \begin{equation*}
     \bar{K} \eqdef \left\lceil\frac{48 L \Delta \sigma^2}{\varepsilon^4}\right\rceil .
@@ -957,6 +1167,4 @@ Because the quantity $t(r;T)$ depends on both the threshold $r$ and the starting
 Indeed, the worker speeds may change arbitrarily with time, so two recursions with a similar number of steps need not be within a constant factor of each other.
 
 Therefore, in the general case, the clean comparison is that both methods need about $1/\varepsilon^2$ time blocks, but we cannot claim that our bound is equal to the \ringmaster bound up to a universal constant without extra assumptions on the computation-rate functions $\{p_i\}_{i=1}^n$.
-
-
 \end{document}
