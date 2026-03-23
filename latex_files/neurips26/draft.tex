@@ -2,48 +2,50 @@
 
 % if you need to pass options to natbib, use, e.g.:
 %     \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading neurips_2025
+% before loading neurips_2026
 
 % The authors should use one of these tracks.
 % Before accepting by the NeurIPS conference, select one of the options below.
 % 0. "default" for submission
- \usepackage{neurips_2025}
+\usepackage{neurips_2026}
 % the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
 % 1. "main" option is used for the Main Track
-%  \usepackage[main]{neurips_2025}
+%  \usepackage[main]{neurips_2026}
 % 2. "position" option is used for the Position Paper Track
-%  \usepackage[position]{neurips_2025}
-% 3. "dandb" option is used for the Datasets & Benchmarks Track
- % \usepackage[dandb]{neurips_2025}
+%  \usepackage[position]{neurips_2026}
+% 3. "eandd" option is used for the Evaluations & Datasets Track
+ % \usepackage[eandd]{neurips_2026}
+ % if you need to opt-in for a single-blind submission in the E&D track:
+ %\usepackage[eandd, nonanonymous]{neurips_2026}
 % 4. "creativeai" option is used for the Creative AI Track
-%  \usepackage[creativeai]{neurips_2025}
+%  \usepackage[creativeai]{neurips_2026}
 % 5. "sglblindworkshop" option is used for the Workshop with single-blind reviewing
- % \usepackage[sglblindworkshop]{neurips_2025}
+ % \usepackage[sglblindworkshop]{neurips_2026}
 % 6. "dblblindworkshop" option is used for the Workshop with double-blind reviewing
-%  \usepackage[dblblindworkshop]{neurips_2025}
+%  \usepackage[dblblindworkshop]{neurips_2026}
 
 % After being accepted, the authors should add "final" behind the track to compile a camera-ready version.
 % 1. Main Track
- % \usepackage[main, final]{neurips_2025}
+ % \usepackage[main, final]{neurips_2026}
 % 2. Position Paper Track
-%  \usepackage[position, final]{neurips_2025}
-% 3. Datasets & Benchmarks Track
- % \usepackage[dandb, final]{neurips_2025}
+%  \usepackage[position, final]{neurips_2026}
+% 3. Evaluations & Datasets Track
+ % \usepackage[eandd, final]{neurips_2026}
 % 4. Creative AI Track
-%  \usepackage[creativeai, final]{neurips_2025}
+%  \usepackage[creativeai, final]{neurips_2026}
 % 5. Workshop with single-blind reviewing
-%  \usepackage[sglblindworkshop, final]{neurips_2025}
+%  \usepackage[sglblindworkshop, final]{neurips_2026}
 % 6. Workshop with double-blind reviewing
-%  \usepackage[dblblindworkshop, final]{neurips_2025}
+%  \usepackage[dblblindworkshop, final]{neurips_2026}
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote.
 % For workshops (5., 6.), the authors should add the name of the workshop, "\workshoptitle" command is used to set the workshop title.
 % \workshoptitle{WORKSHOP TITLE}
 
 % "preprint" option is used for arXiv or other preprint submissions
- % \usepackage[preprint]{neurips_2025}
+ % \usepackage[preprint]{neurips_2026}
 
 % to avoid loading the natbib package, add option nonatbib:
-%    \usepackage[nonatbib]{neurips_2025}
+%    \usepackage[nonatbib]{neurips_2026}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -56,7 +58,7 @@
 \usepackage{xcolor}         % colors
 
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
-\title{Parameter-Agnostic LMO-Based Ringmaster ASGD}
+\title{Formatting Instructions For NeurIPS 2026}
 
 
 % The \author macro works with any number of authors. There are two commands
@@ -106,12 +108,11 @@
 
 \maketitle
 
-
 \begin{abstract}
-    Parameter agnostic lmo-based \ringmaster.
-    We might extend it to the $(L_0, L_1)$--smoothness setting.
+  Parameter agnostic lmo-based \ringmaster.
+  We might extend it to the $(L_0, L_1)$--smoothness setting.
 
-    Also, we can maybe do the same stuff for \ringleader.
+  Also, we can maybe do the same stuff for \ringleader.
 \end{abstract}
 
 
@@ -120,8 +121,8 @@
 % 
 We study the nonconvex stochastic optimization problem
 \begin{equation}\label{eq:problem}
-  \minimize_{x \in \R^d} 
-  \left\{ f(x) \coloneqq \ExpSub{\xi \sim \cD}{f(x;\xi)} \right\} ,
+\minimize_{x \in \R^d} 
+\left\{ f(x) \coloneqq \ExpSub{\xi \sim \cD}{f(x;\xi)} \right\} ,
 \end{equation}
 where $x \in \R^d$ is the model parameter and $\xi \sim \cD$ is a random data sample.
 
@@ -130,9 +131,9 @@ Each worker $i$ has access to the same data distribution~$\cD$.
 To model heterogeneous worker speeds, we use the fixed computation model of \citet{mishchenko2022asynchronous}.
 % 
 \begin{assumption}[Fixed Computation Model]
-    \label{assump:fixed_time}
-    For each worker $i \in [n]$, computing a stochastic gradient $\nabla f(x;\xi)$ takes $\tau_i > 0$ seconds.
-    Without loss of generality, we assume $\tau_1 \le \tau_2 \le \cdots \le \tau_n$.
+  \label{assump:fixed_time}
+  For each worker $i \in [n]$, computing a stochastic gradient $\nabla f(x;\xi)$ takes $\tau_i > 0$ seconds.
+  Without loss of generality, we assume $\tau_1 \le \tau_2 \le \cdots \le \tau_n$.
 \end{assumption}
 % 
 We also assume zero communication delay between the workers and the server.
@@ -141,17 +142,17 @@ This assumption is standard in time-complexity analyses of distributed optimizat
 
 We introduce the following notation: linear minimization oracle
 $$
-    \textrm{lmo}(y) \eqdef \argmin_{x~:~\|x\| \le 1} \inp{y}{x} .
+  \textrm{lmo}(y) \eqdef \argmin_{x~:~\|x\| \le 1} \inp{y}{x} .
 $$
 % 
 \begin{definition}
-    \label{def:gen_smooth}
-    Let $f:\R^d\rightarrow\R$ be differentiable.
-    Then $f$ is symmetric $(L_0, L_1)$-smooth if there exist $L_0,L_1 \ge 0$ such that for any $x, y \in \R^d$
-    \begin{equation}
-        \label{eq:gen_smooth}
-        \norm{\nabla f(x) - \nabla f(y)}_* \le \sup_{\theta \in [0,1]} \( L_0 + L_1 \norm{\nabla f(\theta x +(1-\theta)y)}_* \) \norm{x-y}.
-    \end{equation}
+  \label{def:gen_smooth}
+  Let $f:\R^d\rightarrow\R$ be differentiable.
+  Then $f$ is symmetric $(L_0, L_1)$-smooth if there exist $L_0,L_1 \ge 0$ such that for any $x, y \in \R^d$
+  \begin{equation}
+      \label{eq:gen_smooth}
+      \norm{\nabla f(x) - \nabla f(y)}_* \le \sup_{\theta \in [0,1]} \( L_0 + L_1 \norm{\nabla f(\theta x +(1-\theta)y)}_* \) \norm{x-y}.
+  \end{equation}
 \end{definition}
 % 
 % 
@@ -160,52 +161,52 @@ $$
 % 
 % 
 \begin{algorithm}[H]
-    \caption{LMO \ringmaster (without calculation stops)}
-    \label{alg:ringmaster_lmo}
-    \begin{algorithmic}[1]
-        \STATE \textbf{Input:} points $x^0, m^0 \in \R^d$, stepsize $\eta_k > 0,$ delay threshold $R_k \in \N$, momentum parameter $0<\alpha_k \le 1$.
-        \STATE Set $k = 0$
-        \STATE Workers start computing stochastic gradients at $x^0$
-        \WHILE{not terminated}
-            \STATE Gradient $g^k = \nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
-            \highlightcolor
-            \IF{$\delta^k < R_k$}
-                \color{black}
-                \STATE Update the momentum: $m^{k+1} = \alpha_k g^k + (1-\alpha_k)m^{k} $
-                \STATE Update the model:
-                    $x^{k+1} = x^{k} + \eta_k\textrm{lmo}(m^{k+1})$
-                \STATE Worker $i$ begins calculating 
-                    $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
-                \STATE Update the iteration number $k = k + 1$
-            \ELSE
-                \STATE Ignore the outdated gradient 
-                    $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
-                \STATE Worker $i$ begins calculating 
-                    $\nabla f\big(x^{k}; \xi^{k}_{i}\big)$
-            \ENDIF
-        \ENDWHILE
-    \end{algorithmic}
+  \caption{LMO \ringmaster (without calculation stops)}
+  \label{alg:ringmaster_lmo}
+  \begin{algorithmic}[1]
+      \STATE \textbf{Input:} points $x^0, m^0 \in \R^d$, stepsize $\eta_k > 0,$ delay threshold $R_k \in \N$, momentum parameter $0<\alpha_k \le 1$.
+      \STATE Set $k = 0$
+      \STATE Workers start computing stochastic gradients at $x^0$
+      \WHILE{not terminated}
+          \STATE Gradient $g^k = \nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
+          \highlightcolor
+          \IF{$\delta^k < R_k$}
+              \color{black}
+              \STATE Update the momentum: $m^{k+1} = \alpha_k g^k + (1-\alpha_k)m^{k} $
+              \STATE Update the model:
+                  $x^{k+1} = x^{k} + \eta_k\textrm{lmo}(m^{k+1})$
+              \STATE Worker $i$ begins calculating 
+                  $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
+              \STATE Update the iteration number $k = k + 1$
+          \ELSE
+              \STATE Ignore the outdated gradient 
+                  $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$
+              \STATE Worker $i$ begins calculating 
+                  $\nabla f\big(x^{k}; \xi^{k}_{i}\big)$
+          \ENDIF
+      \ENDWHILE
+  \end{algorithmic}
 \end{algorithm}
 % 
 % 
 \begin{algorithm}[H]
-    \caption{\ringmaster (with calculation stops)}
-    \label{alg:ringmasternewstops}
-    \begin{algorithmic}[1]
-        \STATE \textbf{Input:} points $x^0, m^0 \in \R^d$, stepsize $\eta_k > 0,$ delay threshold $R_k \in \N$, momentum parameter $0<\alpha_k \le 1$.
-        \STATE Set $k = 0$
-        \STATE Workers start computing stochastic gradients at $x^0$
-        \WHILE{not terminated}
-            \STATE {\highlightcolor Stop calculating stochastic gradients with delays $\geq R$, and start computing new ones at $x^k$ instead}
-            \STATE Gradient $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
-            \STATE Update the momentum: $m^{k+1} = \alpha_k g^k + (1-\alpha_k)m^{k} $
-            \STATE Update the model:
-                $x^{k+1} = x^{k} + \eta_k\textrm{lmo}(m^{k+1})$
-            \STATE Worker $i$ begins calculating 
-                $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
-            \STATE Update the iteration number $k = k + 1$
-        \ENDWHILE
-    \end{algorithmic}
+  \caption{\ringmaster (with calculation stops)}
+  \label{alg:ringmasternewstops}
+  \begin{algorithmic}[1]
+      \STATE \textbf{Input:} points $x^0, m^0 \in \R^d$, stepsize $\eta_k > 0,$ delay threshold $R_k \in \N$, momentum parameter $0<\alpha_k \le 1$.
+      \STATE Set $k = 0$
+      \STATE Workers start computing stochastic gradients at $x^0$
+      \WHILE{not terminated}
+          \STATE {\highlightcolor Stop calculating stochastic gradients with delays $\geq R$, and start computing new ones at $x^k$ instead}
+          \STATE Gradient $\nabla f\big(x^{k-\delta^k}; \xi^{k-\delta^k}_{i}\big)$ arrives from worker $i$
+          \STATE Update the momentum: $m^{k+1} = \alpha_k g^k + (1-\alpha_k)m^{k} $
+          \STATE Update the model:
+              $x^{k+1} = x^{k} + \eta_k\textrm{lmo}(m^{k+1})$
+          \STATE Worker $i$ begins calculating 
+              $\nabla f\big(x^{k+1}; \xi^{k+1}_{i}\big)$
+          \STATE Update the iteration number $k = k + 1$
+      \ENDWHILE
+  \end{algorithmic}
 \end{algorithm}
 \arto{Should I do while $k\le K$?}
 \arto{Change highlight color}
@@ -217,25 +218,25 @@ $$
 \subsection{Iteration Complexity}
 % 
 \begin{theorem}[Iteration Complexity; Proof in \Cref{proof:iteration_complexity}]\label{thm:iteration_complexity}
-    Assume $f$ is $L_0$-smooth, that is, $L_1 = 0$.
-    Take $\alpha_0 =1$, $\alpha_k = \nicefrac{1}{\sqrt{k}}$, $R_k = \left\lfloor\nicefrac{1}{\alpha_k}\right\rfloor$, and $\eta_k = \nicefrac{\eta}{(k+1)^{\nicefrac{3}{4}}}$ for $k \ge 1$.
-    Then, after $K$ iterations, the iterates satisfy
-    \begin{equation*}
-        \min_{k \in \{0,\dots,K-1\}} \Exp{\norm{\nabla f(x^k)}_*}
-        =
-        \mathcal{O}\left(
-            \frac{\Psi \log K}{K^{1/4}}
-        \right).
-    \end{equation*}
-    where
-    \begin{equation*}
-        \Psi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta .
-    \end{equation*}
-    Consequently, the number of iterations needed to reach an $\varepsilon$-stationary point satisfies
-    \begin{equation*}
-        K_\varepsilon
-        = \cO\left(\frac{\Psi^4}{\varepsilon^4} \( \log \frac{1}{\varepsilon} \)^4\right).
-     \end{equation*}
+  Assume $f$ is $L_0$-smooth, that is, $L_1 = 0$.
+  Take $\alpha_0 =1$, $\alpha_k = \nicefrac{1}{\sqrt{k}}$, $R_k = \left\lfloor\nicefrac{1}{\alpha_k}\right\rfloor$, and $\eta_k = \nicefrac{\eta}{(k+1)^{\nicefrac{3}{4}}}$ for $k \ge 1$.
+  Then, after $K$ iterations, the iterates satisfy
+  \begin{equation*}
+      \min_{k \in \{0,\dots,K-1\}} \Exp{\norm{\nabla f(x^k)}_*}
+      =
+      \mathcal{O}\left(
+          \frac{\Psi \log K}{K^{1/4}}
+      \right).
+  \end{equation*}
+  where
+  \begin{equation*}
+      \Psi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta .
+  \end{equation*}
+  Consequently, the number of iterations needed to reach an $\varepsilon$-stationary point satisfies
+  \begin{equation*}
+      K_\varepsilon
+      = \cO\left(\frac{\Psi^4}{\varepsilon^4} \( \log \frac{1}{\varepsilon} \)^4\right).
+   \end{equation*}
 \end{theorem}
 \arto{$R_k$ doens't have to be an integer}
 \arto{Can we have $R_k = \lfloor \sqrt{k+1} \rfloor$? Same for $\alpha_k$?}
@@ -245,71 +246,71 @@ We now analyze the wall-clock time complexity of \Cref{alg:ringmaster_lmo}.
 The following lemma bounds the wall-clock time needed to complete $K$ iterations under the square-root threshold schedule.
 % 
 \begin{lemma}[Time Complexity for Square-Root Threshold; Proof in \Cref{proof:sqrt_threshold}]\label{lemma:time_sqrt}
-    Consider \Cref{alg:ringmaster_lmo} with delay threshold $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
-    Under \Cref{assump:fixed_time}, the wall-clock time needed to complete the first $K$ iterations satisfies
-    \begin{equation*}
-        T(K) = \mathcal{O}\left( \sqrt{K} \min_{m \in [n]} H_m \left( 1 + \frac{\sqrt{K}}{m} \right) \right).
-    \end{equation*}
-    where
-    \begin{equation*}
-        H_m \coloneqq \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1}
-    \end{equation*}
-    is the harmonic mean of the first $m$ computation times $\tau_1,\dots,\tau_m$.
+  Consider \Cref{alg:ringmaster_lmo} with delay threshold $R_k = \lfloor \sqrt{k+1} \rfloor$ for $k \ge 0$.
+  Under \Cref{assump:fixed_time}, the wall-clock time needed to complete the first $K$ iterations satisfies
+  \begin{equation*}
+      T(K) = \mathcal{O}\left( \sqrt{K} \min_{m \in [n]} H_m \left( 1 + \frac{\sqrt{K}}{m} \right) \right).
+  \end{equation*}
+  where
+  \begin{equation*}
+      H_m \coloneqq \left(\frac{1}{m}\sum_{i=1}^{m}\frac{1}{\tau_i}\right)^{-1}
+  \end{equation*}
+  is the harmonic mean of the first $m$ computation times $\tau_1,\dots,\tau_m$.
 \end{lemma}
 \arto{Change $R_k$?}
 % 
 \begin{proof}[Proof sketch]
-    Define $\mathcal{K}_r \coloneqq \{k \mid \lfloor R_k \rfloor = r\}$, namely the set of iterations for which the threshold equals $r$.
-    The schedule $R_k = \lfloor \sqrt{k+1} \rfloor$ partitions the $K$ iterations into these threshold-constant blocks.
-    For each block $\mathcal{K}_r$, we apply \Cref{lem:time_R}, which is exactly the fixed-threshold lemma of \citet{maranjyan2025ringmaster} restated in the appendix, and then sum over all values $r \le \lfloor \sqrt{K} \rfloor$.
-    Since $|\mathcal{K}_r| = 2r+1 = \mathcal{O}(r)$, each block contributes only a constant number of fixed-threshold chunks, which yields the claim.
+  Define $\mathcal{K}_r \coloneqq \{k \mid \lfloor R_k \rfloor = r\}$, namely the set of iterations for which the threshold equals $r$.
+  The schedule $R_k = \lfloor \sqrt{k+1} \rfloor$ partitions the $K$ iterations into these threshold-constant blocks.
+  For each block $\mathcal{K}_r$, we apply \Cref{lem:time_R}, which is exactly the fixed-threshold lemma of \citet{maranjyan2025ringmaster} restated in the appendix, and then sum over all values $r \le \lfloor \sqrt{K} \rfloor$.
+  Since $|\mathcal{K}_r| = 2r+1 = \mathcal{O}(r)$, each block contributes only a constant number of fixed-threshold chunks, which yields the claim.
 \end{proof}
 % 
 Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the total wall-clock complexity for reaching an $\varepsilon$-stationary point.
 % 
 \begin{theorem}[Total Wall-Clock Complexity]\label{thm:time_complexity}
-    Under the assumptions and parameter choices of \Cref{thm:iteration_complexity}, let $K_\varepsilon$ be the number of iterations needed to reach an $\varepsilon$-stationary point.
-    Then, under \Cref{assump:fixed_time}, the corresponding wall-clock time
-    $T_\varepsilon \coloneqq T(K_\varepsilon)$ satisfies
-    \begin{equation*}
-        T_\varepsilon
-        =
-        \widetilde{\mathcal{O}}\left(
-            \frac{\Psi^2}{\varepsilon^2}
-            \min_{m \in [n]} H_m \left(
-                1 + \frac{\Psi^2}{m\varepsilon^2}
-            \right)
-        \right) ,
-    \end{equation*}
-    where $H_m$ is the harmonic mean of the first $m$ computation times $\tau_1,\dots,\tau_m$, $\Psi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta$, and $\widetilde{\mathcal{O}}(\cdot)$ hides logarithmic factors.
+  Under the assumptions and parameter choices of \Cref{thm:iteration_complexity}, let $K_\varepsilon$ be the number of iterations needed to reach an $\varepsilon$-stationary point.
+  Then, under \Cref{assump:fixed_time}, the corresponding wall-clock time
+  $T_\varepsilon \coloneqq T(K_\varepsilon)$ satisfies
+  \begin{equation*}
+      T_\varepsilon
+      =
+      \widetilde{\mathcal{O}}\left(
+          \frac{\Psi^2}{\varepsilon^2}
+          \min_{m \in [n]} H_m \left(
+              1 + \frac{\Psi^2}{m\varepsilon^2}
+          \right)
+      \right) ,
+  \end{equation*}
+  where $H_m$ is the harmonic mean of the first $m$ computation times $\tau_1,\dots,\tau_m$, $\Psi \coloneqq \nicefrac{\Delta_0}{\eta} + \rho \sigma + L_0\eta$, and $\widetilde{\mathcal{O}}(\cdot)$ hides logarithmic factors.
 \end{theorem}
 \arto{Wall clock vs time. say somewhere that we use both...}
 % 
 \begin{proof}
-    By \Cref{thm:iteration_complexity},
-    \begin{equation*}
-        K_\varepsilon = \widetilde{\mathcal{O}}\left(\frac{\Psi^4}{\varepsilon^4}\right),
-    \end{equation*}
-    hence
-    \begin{equation*}
-        \sqrt{K_\varepsilon} = \widetilde{\mathcal{O}}\left(\frac{\Psi^2}{\varepsilon^2}\right).
-    \end{equation*}
-    Applying \Cref{lemma:time_sqrt} with $K = K_\varepsilon$ gives
-    \begin{equation*}
-        T_\varepsilon
-        =
-        \mathcal{O}\left(
-            \sqrt{K_\varepsilon}
-            \min_{m \in [n]} H_m \left(1 + \frac{\sqrt{K_\varepsilon}}{m}\right)
-        \right)
-        =
-        \widetilde{\mathcal{O}}\left(
-            \frac{\Psi^2}{\varepsilon^2}
-            \min_{m \in [n]} H_m \left(
-                1 + \frac{\Psi^2}{m\varepsilon^2}
-            \right)
-        \right).
-    \end{equation*}
+  By \Cref{thm:iteration_complexity},
+  \begin{equation*}
+      K_\varepsilon = \widetilde{\mathcal{O}}\left(\frac{\Psi^4}{\varepsilon^4}\right),
+  \end{equation*}
+  hence
+  \begin{equation*}
+      \sqrt{K_\varepsilon} = \widetilde{\mathcal{O}}\left(\frac{\Psi^2}{\varepsilon^2}\right).
+  \end{equation*}
+  Applying \Cref{lemma:time_sqrt} with $K = K_\varepsilon$ gives
+  \begin{equation*}
+      T_\varepsilon
+      =
+      \mathcal{O}\left(
+          \sqrt{K_\varepsilon}
+          \min_{m \in [n]} H_m \left(1 + \frac{\sqrt{K_\varepsilon}}{m}\right)
+      \right)
+      =
+      \widetilde{\mathcal{O}}\left(
+          \frac{\Psi^2}{\varepsilon^2}
+          \min_{m \in [n]} H_m \left(
+              1 + \frac{\Psi^2}{m\varepsilon^2}
+          \right)
+      \right).
+  \end{equation*}
 \end{proof}
 % 
 % 
@@ -317,16 +318,25 @@ Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the
 % 
 \ringmaster \citep{maranjyan2025ringmaster} has the following time complexity
 \begin{align*}
-    \cO\left(\min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^{m} \frac{1}{\tau_{i}}\right)^{-1} \left(\frac{L \Delta}{\varepsilon^2} + \frac{\sigma^2 L \Delta}{m \varepsilon^4}\right) \right) .
+  \cO\left(\min\limits_{m \in [n]} \left(\frac{1}{m} \sum\limits_{i=1}^{m} \frac{1}{\tau_{i}}\right)^{-1} \left(\frac{L \Delta}{\varepsilon^2} + \frac{\sigma^2 L \Delta}{m \varepsilon^4}\right) \right) .
 \end{align*}
 
 \arto{Have a lemma that our alog and \ringmaster compute the same number of gradients up to constants}
-% 
-% 
-% 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{ack}
+Use unnumbered first level headings for the acknowledgments. All acknowledgments
+go at the end of the paper before the list of references. Moreover, you are required to declare
+funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
+More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2026/PaperInformation/FundingDisclosure}.
+
+
+Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to automatically hide this section in the anonymized submission.
+\end{ack}
+
+% \section*{References}
 {
 \small
 \bibliographystyle{apalike}
@@ -334,9 +344,10 @@ Combining \Cref{thm:iteration_complexity} with \Cref{lemma:time_sqrt} yields the
 }
 \newpage
 \appendix
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Auxiliary Lemmas}
 % 
 \begin{lemma} 
@@ -1167,4 +1178,11 @@ Because the quantity $t(r;T)$ depends on both the threshold $r$ and the starting
 Indeed, the worker speeds may change arbitrarily with time, so two recursions with a similar number of steps need not be within a constant factor of each other.
 
 Therefore, in the general case, the clean comparison is that both methods need about $1/\varepsilon^2$ time blocks, but we cannot claim that our bound is equal to the \ringmaster bound up to a universal constant without extra assumptions on the computation-rate functions $\{p_i\}_{i=1}^n$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\input{checklist.tex}
+
+
 \end{document}
