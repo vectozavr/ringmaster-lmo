@@ -933,6 +933,62 @@ If we are willing to assume that block durations are stable under batching and u
 Intuitively, \Cref{assump:batching_overhead} says that splitting $qR$ updates into $q$ consecutive blocks of size $R$ does not increase the elapsed time by more than a constant factor.
 This is reasonable when worker speeds do not change too much over the time window covered by a few consecutive blocks, so that batching several smaller blocks together does not create a dramatic speedup.
 
+\paragraph{Examples under \Cref{assump:universal_time}.}
+A simple exact case is a single worker with constant rate $p_1(s) \equiv c$.
+Then
+\begin{equation*}
+    t(R;T) = \frac{4R}{c}
+\end{equation*}
+for every $R \ge 1$ and every $T \ge 0$, so
+\begin{equation*}
+    \sum_{j=0}^{q-1} t(R;T_j) = t(qR;T_0),
+\end{equation*}
+and one may take $C_{\rm blk}=1$.
+More generally, if every worker has a constant rate $p_i(s)\equiv c_i$, then $t(R;T)$ is independent of $T$, and one can take a finite constant such as $C_{\rm blk}=n+1$.
+Indeed, writing $c_{\rm tot}\coloneqq \sum_{i=1}^{n} c_i$, the bounds
+\begin{equation*}
+    \sum_{i=1}^{n}\left\lfloor \frac{c_i t}{4} \right\rfloor
+    \le
+    \frac{c_{\rm tot} t}{4}
+    \qquad\text{and}\qquad
+    \sum_{i=1}^{n}\left\lfloor \frac{c_i t}{4} \right\rfloor
+    \ge
+    \frac{c_{\rm tot} t}{4}-n
+\end{equation*}
+show that
+\begin{equation*}
+    t(qR;T_0) \ge \frac{4qR}{c_{\rm tot}}
+    \qquad\text{and}\qquad
+    t(R;T_j) = t(R;0) \le \frac{4(R+n)}{c_{\rm tot}},
+\end{equation*}
+hence
+\begin{equation*}
+    \sum_{j=0}^{q-1} t(R;T_j)
+    =
+    q\, t(R;0)
+    \le
+    (n+1)\, t(qR;T_0).
+\end{equation*}
+This constant-rate regime models a dedicated cluster with reserved GPUs or a tightly controlled on-premise system.
+A more realistic variant is an epoch model in which
+\begin{equation*}
+    p_i(s)=\frac{a_\ell}{\tau_i}
+    \qquad\text{for } s \in [E_\ell,E_{\ell+1}),
+\end{equation*}
+with long epochs and coefficients $a_\ell$ that change only occasionally.
+If the $q$ consecutive sub-blocks fit inside one epoch, then the same constant-rate argument applies on that epoch.
+More broadly, the assumption remains plausible when the whole time window needed to process these $q$ sub-blocks intersects only a small number of epochs and the corresponding coefficients $a_\ell$ are comparable.
+In that regime, both quantities
+\begin{equation*}
+    \sum_{j=0}^{q-1} t(R;T_j)
+    \qquad\text{and}\qquad
+    t(qR;T_0)
+\end{equation*}
+are determined by essentially the same piecewise-constant worker rates, and the only discrepancy comes from how the intervals align with a few epoch boundaries.
+Thus batching cannot create more than a constant-factor speedup unless the system changes dramatically during this short window.
+This matches settings such as a cloud job running inside a stable quota window, where the available accelerator share is nearly fixed for tens of minutes, or an overnight training run in which the cluster is mostly idle except for one brief period of background contention.
+It also covers environments with scheduled throughput changes, for example when autoscaling, maintenance, or co-located jobs modify the effective worker rates only at a few predictable times.
+
 \begin{assumption}[Bounded Start-Time Distortion]
     \label{assump:start_time_distortion}
     There exists a constant $C_{\rm time} \ge 1$ such that
@@ -956,6 +1012,27 @@ For example, the stronger condition
     \qquad i \in [n], \quad s \ge 0,
 \end{equation*}
 implies \Cref{assump:start_time_distortion} with $C_{\rm time} = q_+/q_-$.
+
+\paragraph{Examples under \Cref{assump:universal_time}.}
+The cleanest example is again the constant-rate model $p_i(s)\equiv c_i$, in which case
+\begin{equation*}
+    t(R;T)=t(R;0)
+\end{equation*}
+for all $R \ge 1$ and $T \ge 0$, so one may take $C_{\rm time}=1$.
+More generally, if all worker rates share the same bounded time modulation,
+\begin{equation*}
+    p_i(s)=\frac{a(s)}{\tau_i},
+    \qquad
+    q_- \le a(s) \le q_+,
+\end{equation*}
+then every interval of length $t$ delivers between $q_-$ and $q_+$ times the amount of work produced by the fixed computation model, so the duration of a block of size $R$ can change with its starting time only by the factor $q_+/q_-$.
+This covers realistic systems with bounded co-tenancy or mild thermal throttling, where the whole cluster speeds up or slows down over time but only within a controlled envelope.
+Another concrete example is a scheduled training window on edge devices or lab machines, where
+\begin{equation*}
+    p_i(s)=\frac{a(s)}{\tau_i}
+\end{equation*}
+and $a(s)$ is lower during a short busy period and higher during a mostly idle period, while remaining bounded away from both $0$ and $\infty$.
+In that case, starting a block a bit earlier or later changes its duration only by a constant factor.
 
 The next lemma shows that \Cref{assump:start_time_distortion} already removes the recursive dependence on the intermediate starting times.
 \begin{lemma}[Simplified Formula Under Bounded Start-Time Distortion]
