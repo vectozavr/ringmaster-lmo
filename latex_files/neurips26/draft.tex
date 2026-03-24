@@ -474,6 +474,41 @@ Thus, we have
 % 
 % 
 \newpage
+\section{Proof of }
+Let us first restate the theorem 
+\begin{theorem}
+    Assume $f$ is symmetric $(L_0, L_1)$-smooth. 
+    \begin{itemize}
+        \item In the case, when $L_1= 0$, take momentum parameter and stepsize as follows 
+        \begin{equation*}
+            \alpha_k = \begin{cases}
+                1,& k = 0;\\
+                \alpha = \min\left\{1, \frac{\Delta_0^{\nicefrac{1}{2}}L_0^{\nicefrac{1}{2}}}{\rho\sigma K^{\nicefrac{1}{2}}}\right\},& k \geq 1;
+            \end{cases};\quad \eta = \min\left\{\sqrt{\frac{\Delta_0}{L_0 K}}, \left(\frac{\Delta_0}{K L_0^{\nicefrac{1}{3}}(\rho\sigma)^{\nicefrac{2}{3}}}\right)^{\nicefrac{3}{4}}\right\}.
+        \end{equation*}
+        Then, the number of iterations needed to reach an $\varepsilon$-stationary point satisfies
+        \begin{equation*}
+            K_{\varepsilon} = \cO\left(\frac{L_0\Delta_0 }{\varepsilon^2} + \frac{L_0\Delta_0(\rho\sigma)^2}{\varepsilon^4}\right).
+        \end{equation*}
+        \item In the case, when $L_1 >0$, take momentum parameter and stepsize as \begin{eqnarray*}
+            \alpha_k &=& \begin{cases}
+                1,& k = 0;\\
+                \alpha = \min\left\{1, \frac{\Delta_0^{\nicefrac{1}{2}}L_0^{\nicefrac{1}{2}}}{\rho\sigma K^{\nicefrac{1}{2}}}\right\},& k \geq 1;
+            \end{cases};\\
+            \eta_k &=& \eta = \min\left\{\sqrt{\frac{\Delta_0}{L_0 K}}, \frac{1}{L_1}, \frac{\Delta_0^{\nicefrac{1}{2}}L_0^{\nicefrac{1}{2}}}{L_1\rho\sigma K^{\nicefrac{1}{2}}},  \left(\frac{\Delta_0}{K L_0^{\nicefrac{1}{3}}(\rho\sigma)^{\nicefrac{2}{3}}}\right)^{\nicefrac{3}{4}}\right\}.
+        \end{eqnarray*} 
+        Then, the number of iterations needed to reach an $\varepsilon$-stationary point satisfies
+        \begin{equation*}
+            K_{\varepsilon} = \cO\left(\frac{L_0\Delta_0 }{\varepsilon^2}+ \frac{L_1\Delta_0 }{\varepsilon} + \frac{L_1^2\Delta_0(\rho\sigma)^2}{L_0\varepsilon^2} + \frac{L_0\Delta_0(\rho\sigma)^2}{\varepsilon^4}\right).
+        \end{equation*}
+    \end{itemize}
+    
+
+
+\end{theorem}
+%
+%
+\newpage
 \section{Proof of \Cref{thm:iteration_complexity}}
 \label{proof:iteration_complexity}
 Let us first restate the theorem before proving it.
