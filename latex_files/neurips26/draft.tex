@@ -350,18 +350,19 @@ Do {\bf not} include this section in the anonymized submission, only in the fina
 
 \section{Auxiliary Lemmas}
 % 
-\begin{lemma} 
+We assume that the minimized function is symmetric $(L_0,L_1)$-smooth. To prove convergence theorem we state auxiliary lemma with several useful properties. 
+\begin{lemma}[\cite{chen2023generalized}]
     \label{lem:gen_smooth}
-    Let $f$ be $(L_0, L_1)$-smooth. Then for any $x,y\in \R^d$ it holds 
+    Let $f$ be symmetric $(L_0, L_1)$-smooth. Then for any $x,y\in \R^d$ it holds 
     \begin{gather*}
         f(x) \le f(y) + \inp{\nabla f(y)}{x-y} +\frac{1}{2}\left(L_0 + L_1\norm{\nabla f(y)}_*\right)\exp\left(L_1\norm{x-y}\right)\norm{x-y}^2, \\
         \norm{\nabla f(x) - \nabla f(y)}_* \le \left(L_0 + L_1\norm{\nabla f(y)}_*\right)\exp\left(L_1\norm{x-y}\right)\norm{x-y} .
     \end{gather*}
 \end{lemma}
-\arto{References?}
-\begin{lemma}
+Next lemma is a decent lemma for update  $x^{k+1} = x^{k} + \eta_k\textrm{lmo}(m^{k+1})$. 
+\begin{lemma}[\cite{khirirat2025better}]
     \label{lem:descent_lemma}
-    Let $f$ be $(L_0, L_1)$-smooth. Then iterates of Algorithm~\ref{alg:ringmaster_lmo} satisfy 
+    Let $f$ be symmetric $(L_0, L_1)$-smooth. Then iterates of Algorithm~\ref{alg:ringmaster_lmo} satisfy 
     \begin{equation}
         \sum_{k=0}^{K-1}\eta_k\phi_k\norm{\nabla f(x^k)}_* \leq \Delta_0 + 2\sum^{K-1}_{k=0}\eta_k\norm{\hat{e}_{k+1}}_* +\frac{L_0}{2}\sum^{K-1}_{k=0}\exp\left(L_1\eta_k\right)\eta_k^2 ~,
     \end{equation}
@@ -472,6 +473,7 @@ Thus, we have
 \end{proof}
 % 
 % 
+\newpage
 \section{Proof of \Cref{thm:iteration_complexity}}
 \label{proof:iteration_complexity}
 Let us first restate the theorem before proving it.
@@ -565,6 +567,7 @@ Thus, we have
 \end{proof}
 % 
 % 
+\newpage
 \section{Time Complexity Analysis for the Fixed-Time Case}
 \arto{name?}
 % 
@@ -692,6 +695,7 @@ We now specialize \Cref{lem:time_RK} to the square-root threshold schedule.
 % 
 % 
 % 
+\newpage
 \section{Time Complexity Analysis for Arbitrarily Changing Computation Times}\label{sec:arbitrary_time}
 % 
 \Cref{assump:fixed_time} does not cover many practical settings.
