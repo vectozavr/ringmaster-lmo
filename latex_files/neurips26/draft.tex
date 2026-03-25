@@ -1006,451 +1006,7 @@ It reduces the changing-threshold analysis to a sequence of threshold-constant s
     Since $\sqrt{K_{\varepsilon}} = \widetilde{\mathcal{O}}(\Psi^2/\varepsilon^2)$, the claim follows.
 \end{proof}
 
-\subsection{Comparison Under Additional Regularity Assumptions}
-\label{sec:comparison_under_regular_assumptions}
-
-The comparison above treats the functions $t(R;T)$ as completely arbitrary.
-If we are willing to assume that block durations are stable under batching and under shifts in the starting time, then the recursion from \Cref{thm:time_arbitrary} simplifies substantially and the wall-clock behavior of our method becomes very close to that of fixed-threshold \ringmaster.
-
-\begin{assumption}[Bounded Batching Overhead]
-    \label{assump:batching_overhead}
-    There exists a constant $C_{\rm blk} \ge 1$ such that the following holds.
-    For every integer $R \ge 1$, every integer $q \ge 1$, and every starting time $T_0 \ge 0$, define
-    \begin{equation*}
-        T_{j+1} \coloneqq T_j + t(R;T_j),
-        \qquad j = 0,\dots,q-1.
-    \end{equation*}
-    Then
-    \begin{equation*}
-        \sum_{j=0}^{q-1} t(R;T_j)
-        \le
-        C_{\rm blk}\, t(qR;T_0).
-    \end{equation*}
-\end{assumption}
-
-Intuitively, \Cref{assump:batching_overhead} says that splitting $qR$ updates into $q$ consecutive blocks of size $R$ does not increase the elapsed time by more than a constant factor.
-This is reasonable when worker speeds do not change too much over the time window covered by a few consecutive blocks, so that batching several smaller blocks together does not create a dramatic speedup.
-
-\paragraph{Examples where \Cref{assump:batching_overhead} is satisfied under \Cref{assump:universal_time}.}
-Recall that
-\begin{equation*}
-    t(R;T)
-    =
-    \min \left\{t \ge 0 :
-    \sum_{i=1}^{n}
-    \left\lfloor
-        \frac{1}{4}\int_{T}^{T+t} p_i(s)\,ds
-    \right\rfloor
-    \ge R
-    \right\}.
-\end{equation*}
-For the examples below, the basic strategy is always the same: we upper bound each small-block duration $t(R;T_j)$ and lower bound the batched duration $t(qR;T_0)$.
-
-A first exact example is a single worker with constant rate $p_1(s)\equiv c$.
-Then for any interval of length $t$,
-\begin{equation*}
-    \left\lfloor
-        \frac{1}{4}\int_{T}^{T+t} p_1(s)\,ds
-    \right\rfloor
-    =
-    \left\lfloor \frac{ct}{4} \right\rfloor .
-\end{equation*}
-Hence the condition
-\begin{equation*}
-    \left\lfloor \frac{ct}{4} \right\rfloor \ge R
-\end{equation*}
-is equivalent to
-\begin{equation*}
-    t \ge \frac{4R}{c},
-\end{equation*}
-so
-\begin{equation*}
-    t(R;T)=\frac{4R}{c}
-    \qquad
-    \text{for all } R \ge 1,\; T \ge 0.
-\end{equation*}
-Therefore
-\begin{equation*}
-    \sum_{j=0}^{q-1} t(R;T_j)
-    =
-    q\,\frac{4R}{c}
-    =
-    \frac{4qR}{c}
-    =
-    t(qR;T_0),
-\end{equation*}
-and one may take $C_{\rm blk}=1$.
-
-The same idea works for multiple workers with constant rates $p_i(s)\equiv c_i$.
-Write
-\begin{equation*}
-    c_{\rm tot}\coloneqq \sum_{i=1}^{n} c_i.
-\end{equation*}
-For an interval of length $t$, we have
-\begin{equation*}
-    \sum_{i=1}^{n}\left\lfloor \frac{c_i t}{4} \right\rfloor
-    \le
-    \frac{c_{\rm tot} t}{4},
-\end{equation*}
-and also
-\begin{equation*}
-    \sum_{i=1}^{n}\left\lfloor \frac{c_i t}{4} \right\rfloor
-    \ge
-    \sum_{i=1}^{n}\left(\frac{c_i t}{4}-1\right)
-    =
-    \frac{c_{\rm tot} t}{4}-n.
-\end{equation*}
-The upper bound says that one cannot finish $qR$ updates before time $4qR/c_{\rm tot}$, so
-\begin{equation*}
-    t(qR;T_0)\ge \frac{4qR}{c_{\rm tot}}.
-\end{equation*}
-The lower bound says that by time $4(R+n)/c_{\rm tot}$ one has certainly finished at least $R$ updates, so
-\begin{equation*}
-    t(R;T)=t(R;0)\le \frac{4(R+n)}{c_{\rm tot}}.
-\end{equation*}
-Since the rate is constant, every small block has the same duration bound, and therefore
-\begin{equation*}
-    \sum_{j=0}^{q-1} t(R;T_j)
-    =
-    q\, t(R;0)
-    \le
-    q\,\frac{4(R+n)}{c_{\rm tot}}
-    \le
-    (n+1)\,\frac{4qR}{c_{\rm tot}}
-    \le
-    (n+1)\, t(qR;T_0).
-\end{equation*}
-Thus one may take $C_{\rm blk}=n+1$.
-This models a dedicated cluster with reserved GPUs or a tightly controlled on-premise system, where the effective worker speeds stay essentially constant during the run.
-
-The bounded-envelope condition from \Cref{assump:start_time_distortion} also works here.
-Assume that there exist numbers $q_-,q_+>0$ and nominal times $\tau_i>0$ such that
-\begin{equation*}
-    \frac{q_-}{\tau_i}
-    \le
-    p_i(s)
-    \le
-    \frac{q_+}{\tau_i},
-    \qquad i \in [n],\; s \ge 0.
-\end{equation*}
-Write
-\begin{equation*}
-    S \coloneqq \sum_{i=1}^{n}\frac{1}{\tau_i}.
-\end{equation*}
-Then for every interval $[T,T+t]$,
-\begin{equation*}
-    \sum_{i=1}^{n}
-    \left\lfloor
-        \frac{1}{4}\int_{T}^{T+t} p_i(s)\,ds
-    \right\rfloor
-    \le
-    \frac{q_+ S t}{4},
-\end{equation*}
-because we may simply drop the floors and use the upper envelope.
-Likewise,
-\begin{equation*}
-    \sum_{i=1}^{n}
-    \left\lfloor
-        \frac{1}{4}\int_{T}^{T+t} p_i(s)\,ds
-    \right\rfloor
-    \ge
-    \sum_{i=1}^{n}
-    \left(
-        \frac{1}{4}\int_{T}^{T+t} p_i(s)\,ds - 1
-    \right)
-    \ge
-    \frac{q_- S t}{4} - n.
-\end{equation*}
-Exactly as above, these inequalities imply
-\begin{equation*}
-    t(qR;T_0)\ge \frac{4qR}{q_+ S}
-    \qquad\text{and}\qquad
-    t(R;T)\le \frac{4(R+n)}{q_- S}
-\end{equation*}
-for every $T \ge 0$.
-Therefore
-\begin{equation*}
-    \sum_{j=0}^{q-1} t(R;T_j)
-    \le
-    q\,\frac{4(R+n)}{q_- S}
-    \le
-    \frac{q_+}{q_-}(n+1)\,\frac{4qR}{q_+ S}
-    \le
-    \frac{q_+}{q_-}(n+1)\, t(qR;T_0).
-\end{equation*}
-So this envelope condition implies \Cref{assump:batching_overhead} with
-\begin{equation*}
-    C_{\rm blk} = \frac{q_+}{q_-}(n+1).
-\end{equation*}
-This is a useful sufficient condition in realistic systems where each worker has a nominal speed $1/\tau_i$, but the whole cluster is modulated by a global factor that stays inside a bounded range.
-Examples include mild co-tenancy, bounded thermal throttling, or scheduled I/O and networking slowdowns that affect all workers comparably.
-
-A slightly more general sufficient condition is to bound only the aggregate throughput.
-If there exist constants $P_-,P_+>0$ such that
-\begin{equation*}
-    P_-
-    \le
-    \sum_{i=1}^{n} p_i(s)
-    \le
-    P_+
-    \qquad\text{for all } s \ge 0,
-\end{equation*}
-then the same argument gives
-\begin{equation*}
-    t(qR;T_0)\ge \frac{4qR}{P_+}
-    \qquad\text{and}\qquad
-    t(R;T)\le \frac{4(R+n)}{P_-},
-\end{equation*}
-hence
-\begin{equation*}
-    \sum_{j=0}^{q-1} t(R;T_j)
-    \le
-    \frac{P_+}{P_-}(n+1)\, t(qR;T_0).
-\end{equation*}
-This covers systems where individual worker speeds may fluctuate, but the total amount of compute available to the job stays within a fixed envelope.
-
-The previous sufficient conditions suggest the practical regime in which \Cref{assump:batching_overhead} should be expected to hold.
-If the total throughput of the system does not change too much over the time needed to process the $q$ consecutive sub-blocks, then the split execution and the batched execution see essentially the same pool of compute, and the difference between them comes only from floor effects and from where the block boundaries are placed.
-This is what happens, approximately, in cloud jobs running inside a stable quota window, in overnight training runs with only mild background variation, or in managed services where throughput changes are infrequent and bounded.
-
-\paragraph{Examples where \Cref{assump:batching_overhead} may fail.}
-The key failure mode is repeated loss of near-complete work at block boundaries.
-If a worker contributes almost one full update in each block, but not quite enough to cross the next integer, then each small block discards that partial progress because of the floor in the definition of $t(R;T)$.
-By contrast, a single batched block can accumulate those nearly complete contributions over many epochs before the floor is applied.
-
-A concrete construction is the following.
-Take two workers and threshold $R=1$.
-Partition time into epochs $[E_k,E_{k+1})$, and choose the rates so that over epoch $k$,
-\begin{equation*}
-    \frac{1}{4}\int_{E_k}^{E_{k+1}} p_1(s)\,ds = 1,
-    \qquad
-    \frac{1}{4}\int_{E_k}^{E_{k+1}} p_2(s)\,ds = 1-\varepsilon
-\end{equation*}
-for some fixed $\varepsilon \in (0,1)$.
-One can realize this with piecewise-constant rates, for example by spreading most of the mass over a long interval of length $L_k$ and using a short burst near the end of the epoch.
-
-Now start a block of size $R=1$ at time $E_k$.
-By the end of the epoch, the total number of completed updates is
-\begin{equation*}
-    \left\lfloor 1 \right\rfloor
-    +
-    \left\lfloor 1-\varepsilon \right\rfloor
-    =
-    1.
-\end{equation*}
-So one small block needs essentially one whole epoch.
-If we repeat this $q$ times, starting each new block at the next epoch boundary, then the second worker's contribution $1-\varepsilon$ is lost every time.
-Hence
-\begin{equation*}
-    \sum_{j=0}^{q-1} t(1;T_j)
-    \asymp
-    \sum_{k=1}^{q} L_k.
-\end{equation*}
-
-Now compare this with one batched block of size $q$ started at $E_1$.
-After $m$ epochs, worker $1$ has contributed exactly $m$ completed updates, while worker $2$ has contributed $(1-\varepsilon)m$ updates before flooring.
-Therefore the total number of completed updates available to the batched block is at least
-\begin{equation*}
-    \left\lfloor m \right\rfloor
-    +
-    \left\lfloor (1-\varepsilon)m \right\rfloor
-    \ge
-    (2-\varepsilon)m - 1.
-\end{equation*}
-Thus it suffices to take
-\begin{equation*}
-    m \asymp \frac{q}{2-\varepsilon},
-\end{equation*}
-so that
-\begin{equation*}
-    t(q;E_1)
-    \asymp
-    \sum_{k=1}^{\lceil q/(2-\varepsilon)\rceil} L_k.
-\end{equation*}
-If the epoch lengths grow rapidly, say $L_k = 2^k$, then
-\begin{equation*}
-    \frac{\sum_{j=0}^{q-1} t(1;T_j)}{t(q;E_1)}
-    \asymp
-    \frac{\sum_{k=1}^{q} 2^k}
-         {\sum_{k=1}^{\lceil q/(2-\varepsilon)\rceil} 2^k}
-\end{equation*}
-diverges as $q \to \infty$.
-Hence no uniform constant $C_{\rm blk}$ can satisfy \Cref{assump:batching_overhead}.
-
-At a practical level, this failure mode corresponds to highly bursty systems in which some workers repeatedly provide almost-enough progress but block boundaries prevent this progress from being reused.
-Examples include sharply time-varying spot or volunteer pools, or systems with strong synchronization effects in which useful work arrives in short bursts separated by long quiet periods.
-
-\begin{assumption}[Bounded Start-Time Distortion]
-    \label{assump:start_time_distortion}
-    There exists a constant $C_{\rm time} \ge 1$ such that
-    \begin{equation*}
-        t(R;T)
-        \le
-        C_{\rm time}\, t(R;0)
-    \end{equation*}
-    for every integer $R \ge 1$ and every $T \ge 0$.
-\end{assumption}
-
-Intuitively, \Cref{assump:start_time_distortion} says that the main determinant of the block duration is its size $R$, while the precise starting time affects this duration only up to a constant factor.
-This may hold in practice when the system runs in a roughly stationary regime, or more generally when the worker speeds stay within a bounded envelope over time.
-For example, the stronger condition
-\begin{equation*}
-    \frac{q_-}{\tau_i}
-    \le
-    p_i(s)
-    \le
-    \frac{q_+}{\tau_i},
-    \qquad i \in [n], \quad s \ge 0,
-\end{equation*}
-implies \Cref{assump:start_time_distortion} with $C_{\rm time} = q_+/q_-$.
-
-\paragraph{Examples under \Cref{assump:universal_time}.}
-The cleanest example is again the constant-rate model $p_i(s)\equiv c_i$, in which case
-\begin{equation*}
-    t(R;T)=t(R;0)
-\end{equation*}
-for all $R \ge 1$ and $T \ge 0$, so one may take $C_{\rm time}=1$.
-More generally, if all worker rates share the same bounded time modulation,
-\begin{equation*}
-    p_i(s)=\frac{a(s)}{\tau_i},
-    \qquad
-    q_- \le a(s) \le q_+,
-\end{equation*}
-then every interval of length $t$ delivers between $q_-$ and $q_+$ times the amount of work produced by the fixed computation model, so the duration of a block of size $R$ can change with its starting time only by the factor $q_+/q_-$.
-This covers realistic systems with bounded co-tenancy or mild thermal throttling, where the whole cluster speeds up or slows down over time but only within a controlled envelope.
-Another concrete example is a scheduled training window on edge devices or lab machines, where
-\begin{equation*}
-    p_i(s)=\frac{a(s)}{\tau_i}
-\end{equation*}
-and $a(s)$ is lower during a short busy period and higher during a mostly idle period, while remaining bounded away from both $0$ and $\infty$.
-In that case, starting a block a bit earlier or later changes its duration only by a constant factor.
-
-The next lemma shows that \Cref{assump:start_time_distortion} already removes the recursive dependence on the intermediate starting times.
-\begin{lemma}[Simplified Formula Under Bounded Start-Time Distortion]
-    \label{lem:simplified_formula_start_time}
-    Under \Cref{assump:start_time_distortion}, the square-root schedule satisfies
-    \begin{equation*}
-        T(K)
-        \le
-        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K} \rfloor} t(r;0).
-    \end{equation*}
-    Consequently,
-    \begin{equation*}
-        T_{\varepsilon}
-        \le
-        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K_{\varepsilon}} \rfloor} t(r;0).
-    \end{equation*}
-\end{lemma}
-
-\begin{proof}
-    By \Cref{lem:time_sqrt_arbitrary},
-    \begin{equation*}
-        T(K)
-        \le
-        S_{3\lfloor \sqrt{K} \rfloor},
-    \end{equation*}
-    where
-    \begin{equation*}
-        S_j
-        =
-        S_{j-1}
-        +
-        t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right).
-    \end{equation*}
-    Under \Cref{assump:start_time_distortion}, each increment is bounded by
-    \begin{equation*}
-        t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right)
-        \le
-        C_{\rm time}\,
-        t\!\left(\left\lceil \frac{j}{3} \right\rceil; 0\right).
-    \end{equation*}
-    Summing over $j = 1,\dots,3\lfloor \sqrt{K} \rfloor$ gives
-    \begin{equation*}
-        T(K)
-        \le
-        3 C_{\rm time}\sum_{r=1}^{\lfloor \sqrt{K} \rfloor} t(r;0).
-    \end{equation*}
-    The bound for $T_{\varepsilon}$ follows by taking $K = K_{\varepsilon}$.
-\end{proof}
-
-Under \Cref{assump:start_time_distortion}, the square-root schedule has the same overall wall-clock scaling as a fixed-threshold \ringmaster run with threshold $R \asymp \sqrt{K}$.
-\begin{proposition}[Same Wall-Clock Scaling as Fixed-Threshold \ringmaster]
-    \label{prop:same_scaling_ringmaster}
-    Assume \Cref{assump:start_time_distortion}.
-    Let $R_K \coloneqq \lfloor \sqrt{K} \rfloor$.
-    Then
-    \begin{equation*}
-        T(K)
-        \le
-        3 C_{\rm time}\,
-        R_K\, t(R_K;0).
-    \end{equation*}
-    Moreover, if \ringmaster is run with the fixed threshold $R \equiv R_K$, then
-    \begin{equation*}
-        T^{\rm Ringmaster}(K)
-        \le
-        C_{\rm time}\left\lceil \frac{K}{R_K} \right\rceil t(R_K;0)
-        =
-        \mathcal{O}\left(
-            C_{\rm time}\sqrt{K}\, t(\sqrt{K};0)
-        \right).
-    \end{equation*}
-    Therefore, both methods have the same wall-clock scaling
-    \begin{equation*}
-        \mathcal{O}\left(
-            \sqrt{K}\, t(\sqrt{K};0)
-        \right)
-    \end{equation*}
-    up to constant factors.
-\end{proposition}
-
-\begin{proof}
-    By \Cref{lem:simplified_formula_start_time},
-    \begin{equation*}
-        T(K)
-        \le
-        3 C_{\rm time}\sum_{r=1}^{R_K} t(r;0).
-    \end{equation*}
-    Since $t(r;0)$ is nondecreasing in $r$, we obtain
-    \begin{equation*}
-        \sum_{r=1}^{R_K} t(r;0)
-        \le
-        R_K\, t(R_K;0),
-    \end{equation*}
-    and hence
-    \begin{equation*}
-        T(K)
-        \le
-        3 C_{\rm time}\,
-        R_K\, t(R_K;0).
-    \end{equation*}
-
-    For fixed-threshold \ringmaster with $R \equiv R_K$, partition the first $K$ iterations into
-    \begin{equation*}
-        \left\lceil \frac{K}{R_K} \right\rceil
-    \end{equation*}
-    consecutive blocks.
-    Under \Cref{assump:start_time_distortion}, each such block takes at most
-    \begin{equation*}
-        C_{\rm time}\, t(R_K;0)
-    \end{equation*}
-    time, so
-    \begin{equation*}
-        T^{\rm Ringmaster}(K)
-        \le
-        C_{\rm time}\left\lceil \frac{K}{R_K} \right\rceil t(R_K;0)
-        =
-        \mathcal{O}\left(
-            C_{\rm time}\sqrt{K}\, t(\sqrt{K};0)
-        \right).
-    \end{equation*}
-    This proves the claim.
-\end{proof}
-
-The previous proposition shows that, under \Cref{assump:start_time_distortion}, the wall-clock conversion from iterations to time is essentially the same for our method and for fixed-threshold \ringmaster.
-Any remaining difference between the final $\varepsilon$-time bounds then comes from the corresponding iteration-complexity estimates, not from the universal computation model itself.
-
-\paragraph{Comparison without additional assumptions.}
+\subsection{Comparison without additional assumptions.}
 For \ringmaster, the iteration complexity in \citet{maranjyan2025ringmaster} is
 \begin{equation*}
     \bar{K} \eqdef \left\lceil\frac{48 L \Delta \sigma^2}{\varepsilon^4}\right\rceil .
@@ -1463,7 +1019,22 @@ Applying the fixed-threshold bound above with this choice of $R$ gives
 \begin{equation*}
     T_{\varepsilon}^{\rm Ringmaster}
     \le
-    T_{\lceil \bar{K}/R \rceil}.
+    T^{(R)}_{N_{\rm Ringmaster}},
+\end{equation*}
+where
+\begin{equation*}
+    N_{\rm Ringmaster} \coloneqq \left\lceil \frac{\bar{K}}{R} \right\rceil
+\end{equation*}
+and the sequence $\{T^{(R)}_k\}$ is defined by
+\begin{align*}
+    T^{(R)}_0 &\coloneqq 0, \\
+    T^{(R)}_k &\coloneqq T^{(R)}_{k-1} + t(R;T^{(R)}_{k-1}).
+\end{align*}
+Since $\bar{K} = \mathcal{O}(\sigma^2 L \Delta/\varepsilon^4)$ and $R = \Theta(\sigma/\varepsilon^2)$, we obtain
+\begin{equation*}
+    N_{\rm Ringmaster}
+    =
+    \mathcal{O}\left(\frac{\sigma L\Delta}{\varepsilon^2}\right).
 \end{equation*}
 
 For our method, the iteration complexity from \Cref{thm:iteration_complexity} is
@@ -1474,30 +1045,26 @@ and \Cref{thm:time_arbitrary} yields the wall-clock bound
 \begin{equation*}
     T_{\varepsilon}
     \le
-    S_{3\lfloor \sqrt{K_{\varepsilon}} \rfloor}
-    =
-    S_{\widetilde{\mathcal{O}}(\Psi^2/\varepsilon^2)} .
+    S_{N_{\rm ours}},
 \end{equation*}
-Therefore, in the arbitrary-time model the direct time comparison is between the two recursions
-\begin{equation*}
-    T_{\lceil \bar{K}/R \rceil}
-    \qquad \text{and} \qquad
-    S_{3\lfloor \sqrt{K_{\varepsilon}} \rfloor}.
-\end{equation*}
-For \ringmaster, the number of recursion steps is
-\begin{equation*}
-    N_{\rm Ringmaster} \coloneqq \left\lceil \frac{\bar{K}}{R} \right\rceil
-    =
-    \mathcal{O}\left(\frac{\sigma L\Delta}{\varepsilon^2}\right).
-\end{equation*}
-For our method, the number of recursion steps is
+where
 \begin{equation*}
     N_{\rm ours} \coloneqq 3\lfloor \sqrt{K_{\varepsilon}} \rfloor
-    =
-    \widetilde{\mathcal{O}}\left(\frac{\Psi^2}{\varepsilon^2}\right)
 \end{equation*}
-time blocks.
-So both methods use on the order of $1/\varepsilon^2$ blocks, up to logarithmic factors.
+and the sequence $\{S_j\}$ is defined by
+\begin{align*}
+    S_0 &\coloneqq 0, \\
+    S_j &\coloneqq S_{j-1} + t\!\left(\left\lceil \frac{j}{3} \right\rceil; S_{j-1}\right).
+\end{align*}
+Since $\sqrt{K_{\varepsilon}} = \widetilde{\mathcal{O}}(\Psi^2/\varepsilon^2)$, this gives
+\begin{equation*}
+    N_{\rm ours}
+    =
+    \widetilde{\mathcal{O}}\left(\frac{\Psi^2}{\varepsilon^2}\right).
+\end{equation*}
+
+Thus, from the point of view of the $\varepsilon$-dependence, the two methods are already quite close: both involve on the order of $1/\varepsilon^2$ time blocks, up to logarithmic factors for our method.
+Their problem-dependent prefactors are different, so at this level the comparison should be understood as an $\varepsilon$-scaling statement.
 
 The difference is in how these blocks are formed.
 \ringmaster uses the same threshold $R$ in every block, while our method uses the increasing thresholds
@@ -1506,13 +1073,52 @@ The difference is in how these blocks are formed.
 \end{equation*}
 Because the quantity $t(r;T)$ depends on both the threshold $r$ and the starting time $T$, the universal computation model does not by itself give a constant-factor comparison between
 \begin{equation*}
-    T_{N_{\rm Ringmaster}}
+    T^{(R)}_{N_{\rm Ringmaster}}
     \qquad \text{and} \qquad
     S_{N_{\rm ours}}.
 \end{equation*}
 Indeed, the worker speeds may change arbitrarily with time, so two recursions with a similar number of steps need not be within a constant factor of each other.
 
 Therefore, in the general case, the clean comparison is that both methods need about $1/\varepsilon^2$ time blocks, but we cannot claim that our bound is equal to the \ringmaster bound up to a universal constant without extra assumptions on the computation-rate functions $\{p_i\}_{i=1}^n$.
+
+If one wants a genuine constant-factor wall-clock comparison, a sufficient extra condition is that block durations of the relevant size remain stable under shifts of the starting time.
+Let
+\begin{equation*}
+    R_{\varepsilon}^{\star} \coloneqq \lfloor \sqrt{K_{\varepsilon}} \rfloor,
+\end{equation*}
+and assume that there exists a constant $C_{\star} \ge 1$ such that
+\begin{equation*}
+    t(R_{\varepsilon}^{\star};T)
+    \le
+    C_{\star}\, t(R_{\varepsilon}^{\star};0)
+    \qquad \text{for all } T \ge 0.
+\end{equation*}
+Since
+\begin{equation*}
+    \left\lceil \frac{j}{3} \right\rceil \le R_{\varepsilon}^{\star}
+    \qquad \text{for } j = 1,\dots,N_{\rm ours},
+\end{equation*}
+and $t(r;T)$ is nondecreasing in $r$, every increment in the recursion for $\{S_j\}$ satisfies
+\begin{equation*}
+    t\!\left(\left\lceil \frac{j}{3} \right\rceil;S_{j-1}\right)
+    \le
+    t(R_{\varepsilon}^{\star};S_{j-1})
+    \le
+    C_{\star}\, t(R_{\varepsilon}^{\star};0).
+\end{equation*}
+Therefore
+\begin{equation*}
+    T_{\varepsilon}
+    \le
+    S_{N_{\rm ours}}
+    \le
+    C_{\star}\, N_{\rm ours}\, t(R_{\varepsilon}^{\star};0)
+    =
+    \widetilde{\mathcal{O}}\left(
+        \frac{\Psi^2}{\varepsilon^2}\, t(\sqrt{K_{\varepsilon}};0)
+    \right).
+\end{equation*}
+In other words, under this localized start-time stability assumption, our adaptive schedule has the same wall-clock scaling as a fixed-threshold scheme at the natural block size $R_{\varepsilon}^{\star}$, up to constant and logarithmic factors.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
