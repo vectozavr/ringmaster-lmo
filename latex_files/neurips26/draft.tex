@@ -514,9 +514,10 @@ Let us first restate the theorem
 \begin{proof}
     We start with Lemma~\ref{lem:descent_lemma}, taking $\eta_k = \eta$ and $\alpha_k = 1$ for $k = 0$ and $\alpha_k =\alpha$ for $k \ge 1$, 
     \begin{eqnarray}
-        0 &\leq& \Delta_0 + 2\eta \sum^{K-1}_{k=0}\|\hat e_{k+1}\|_* +\frac{1}{2}\eta^2 L_0 e^{L_1\eta}K - \eta \sum^{K-1}_{k=0}\left(1-\frac{1}{2}L_1\eta e^{L_1\eta}\right)\|\nabla f(x^k)\|_*. \label{eq:bjhsdvbsdk}
+        0 &\leq& \Delta_0 + 2\eta \sum^{K-1}_{k=0}\|\hat e_{k+1}\|_* +\frac{1}{2}\eta^2 L_0 e^{L_1\eta}K - \eta \sum^{K-1}_{k=0}\left(1-\frac{1}{2}L_1\eta e^{L_1\eta}\right)\|\nabla f(x^k)\|_* ~. \label{eq:bjhsdvbsdk}
     \end{eqnarray}
-    Taking expectation, we bound the second term from the last innequality. By Lemma~\ref{lem:error_bound}, we have
+    Taking expectation, we bound the second term from the last inequality.
+    By Lemma~\ref{lem:error_bound}, we have
     \begin{eqnarray*}
         2\eta \sum^{K-1}_{k=0}\Exp{\|\hat e_{k+1}\|_*}  &\leq&  \underbrace{2\eta \sum^{K-1}_{k=0}\sum_{t=1}^k (1-\alpha)^{k-t} \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)e^{L_1\eta}\eta}_{\eqdef \cT_1}\\
         && + \underbrace{2\eta \sum^{K-1}_{k=0} \sum_{t=1}^k(1-\alpha)^{k-t}\alpha (L_0 + L_1 \Exp{\norm{\nabla f(x^t)}_*})e^{L_1 R\eta}R\eta}_{\eqdef \cT_2}\\
@@ -543,19 +544,20 @@ Let us first restate the theorem
     \begin{eqnarray*}
         0 &\leq& \Delta_0 +\frac{1}{2}\eta^2 L_0 e^{L_1\eta}K - \eta \sum^{K-1}_{k=0}\left(1-\frac{1}{2}L_1\eta e^{L_1\eta}\right)\Exp{\|\nabla f(x^k)\|_*}\\
         && + \frac{2}{\alpha}L_0\eta^2 e^{L_1\eta} K + \frac{2}{\alpha}L_1\eta^2 e^{L_1\eta} \sum_{k=1}^{K-1} \Exp{\norm{\nabla f(x^k)}_*}\\
-        && + \frac{2}{\alpha}L_0R\eta^2 e^{L_1R\eta} K + \frac{2}{\alpha}L_1R\eta^2 e^{L_1R\eta} \sum_{k=1}^{K-1} \Exp{\norm{\nabla f(x^k)}_*}\\
-        && + 2\eta{\color{red} \rho} \sigma \sqrt{\alpha} K.
+        && + \frac{2}{\alpha}L_0R\eta^2\alpha e^{L_1R\eta} K + \frac{2}{\alpha}L_1R\eta^2\alpha e^{L_1R\eta} \sum_{k=1}^{K-1} \Exp{\norm{\nabla f(x^k)}_*}\\
+        && + 2\eta{\color{red} \rho} \sigma \sqrt{\alpha} K ~.
     \end{eqnarray*}
     Multiplying by $\frac{2}{\eta K}$, we have 
     \begin{eqnarray*}
         0 &\leq& \frac{2\Delta_0}{\eta K} + 4{\color{red} \rho} \sigma \sqrt{\alpha} +\eta L_0 \left( e^{L_1\eta} + \frac{4}{\alpha} e^{L_1\eta} + \frac{4}{\alpha} R\alpha e^{L_1R\eta} \right) \\
-        &&- \frac{2}{K} \sum^{K-1}_{k=0}\left(1-\frac{1}{2}L_1\eta e^{L_1\eta} - \frac{2}{\alpha}L_1\eta e^{L_1\eta} - \frac{2}{\alpha}L_1R\eta\alpha e^{L_1R\eta}\right)\Exp{\|\nabla f(x^k)\|_*}
+        &&- \frac{2}{K} \sum^{K-1}_{k=0}\left(1-\frac{1}{2}L_1\eta e^{L_1\eta} - \frac{2}{\alpha}L_1\eta e^{L_1\eta} - \frac{2}{\alpha}L_1R\eta\alpha e^{L_1R\eta}\right)\Exp{\|\nabla f(x^k)\|_*} ~.
     \end{eqnarray*}
     Assuming $R = \frac{1}{\alpha}$ and $\eta \leq \frac{\alpha}{8L_1}$ and $\alpha \leq 1$, we have 
     \begin{eqnarray*}
-         \frac{1}{K} \sum^{K-1}_{k=0}\Exp{\|\nabla f(x^k)\|_*}&\leq& \frac{2\Delta_0}{\eta K} + 4{\color{red} \rho} \sigma \sqrt{\alpha} + 11\eta L_0.
+         \frac{1}{K} \sum^{K-1}_{k=0}\Exp{\|\nabla f(x^k)\|_*}&\leq& \frac{2\Delta_0}{\eta K} + 4{\color{red} \rho} \sigma \sqrt{\alpha} + 10\eta \frac{L_0}{\alpha} + 2\eta L_0 ~.
     \end{eqnarray*}
     Now selecting $\alpha = \min\left\{1, \frac{\Delta_0^{\nicefrac{1}{2}}L_0^{\nicefrac{1}{2}}}{\rho\sigma K^{\nicefrac{1}{2}}}\right\}$ and $\eta = \min\left\{\sqrt{\frac{\Delta_0}{L_0 K}}, \frac{1}{8L_1}, \frac{\Delta_0^{\nicefrac{1}{2}}L_0^{\nicefrac{1}{2}}}{8L_1\rho\sigma K^{\nicefrac{1}{2}}}, \frac{\Delta_0^{\nicefrac{3}{4}}}{K^{\nicefrac{3}{4}} L_0^{\nicefrac{1}{4}}(\rho\sigma)^{\nicefrac{1}{2}}}\right\}$, we obtain that stepsize $\eta$ satisfies $\eta \leq \frac{\alpha}{8L_1}$, and we derive 
+    \arto{Maybe more steps on how we choose these parameters.}
     \begin{equation*}
         \min_{k \in \{0,\dots, K-1\}} \Exp{\|\nabla f(x^k)\|_*} \leq \cO\left(\sqrt{\frac{L_0\Delta_0}{K}} + \frac{L_1\Delta_0}{K} + \frac{L_1 \Delta^{\nicefrac{1}{2}}_0}{L_0^{\nicefrac{1}{2}}K^{\nicefrac{1}{2}}}{\color{red}\rho }\sigma + \frac{L_0^{\nicefrac{1}{4}}\Delta_0^{\nicefrac{1}{4}}({\color{red} \rho}\sigma)^{\nicefrac{1}{2}}}{K^{\nicefrac{1}{4}}}\right).
     \end{equation*}
