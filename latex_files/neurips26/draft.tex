@@ -396,7 +396,7 @@ $$
     If stepsize $\eta_k$ is non-increasing and momentum parameter $\alpha_k$ defined as $\alpha_0 =1$ and $\alpha_k = \frac{1}{\sqrt{k}}$ for $k \ge 1$, then  the iterates of Algorithm~\ref{alg:ringmaster_lmo} satisfy 
     \begin{align*}
         \Exp{\norm{\hat{e}_{k+1}}_*}
-        &\le \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
+        &\le \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
             &\quad + \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \Exp{\norm{\nabla f(x^t)}_*})\exp\left(L_1 R_t\eta_{t-\delta_t}\right)R_t\eta_{t-\delta_t}\\
                 &\quad + {\color{red} \rho} \sigma\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2} ~.
     \end{align*}
@@ -429,8 +429,8 @@ Setting $\alpha_k$ as $\alpha_0 = \alpha_1 =1$ and $\alpha_k = \frac{1}{\sqrt{k}
 To continue the proof, we need to bound the norm of terms $\cT_1$, $\cT_2$ and $\cT_3$. By triangle inequality, we get 
 \begin{eqnarray*}
     \norm{\cT_1}_* &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)(1-\alpha_t) \norm{D_t}_*\\
-    &=& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \norm{ \nabla f(x^{t-1}) - \nabla f(x^t)}_*\\
-    &\le& \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \left(L_0 + L_1\norm{\nabla f(x^t)}_*\right)\exp(L_1\eta_{t-1})\eta_{t-1} ~.
+    &=& \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \norm{ \nabla f(x^{t-1}) - \nabla f(x^t)}_*\\
+    &\le& \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\norm{\nabla f(x^t)}_*\right)\exp(L_1\eta_{t-1})\eta_{t-1} ~.
 \end{eqnarray*}
 We used \Cref{lem:gen_smooth} in the last inequality.
 % 
@@ -464,7 +464,7 @@ where the second inequality uses Jensen's inequality and the third uses iid ness
 Thus, we have 
 \begin{eqnarray*}
     \Exp{\norm{\hat{e}_{k+1}}_*}
-    &\le&  \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
+    &\le&  \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j) \left(L_0 + L_1\Exp{\norm{\nabla f(x^t)}_*}\right)\exp(L_1\eta_{t-1})\eta_{t-1}\\
     && + \sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j) \alpha_t (L_0 + L_1 \Exp{\norm{\nabla f(x^t)}_*})\exp\left(L_1 R_t\eta_{t-\delta_t}\right)R_t\eta_{t-\delta_t}\\
     && + {\color{red} \rho} \sigma\sqrt{\sum_{t=1}^k \prod_{j=t+1}^{k}(1-\alpha_j)^2 \alpha_t^2} ~.
 \end{eqnarray*}
@@ -623,7 +623,7 @@ Taking $R_t = \left\lfloor\frac{1}{\alpha_t}\right\rfloor$ and $\eta_k = \frac{\
         &\le& 2\eta \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}}) t^{-\nicefrac{3}{4}} \\
         &\le& 4\eta\exp\left(\frac{1}{1-\nicefrac{1}{2}}\right) (k+1)^{\nicefrac{1}{2} - \nicefrac{3}{4}}\\
         &\le& \frac{36\eta}{(k+1)^{\nicefrac{1}{4}}};\\
-    \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j)\eta_{t-1} &=& \eta \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}})  t^{-\nicefrac{3}{4}}
+    \sum_{t=1}^k \prod_{j=t}^{k}(1-\alpha_j)\eta_{t-1} &\leq& \eta \sum_{t=1}^k \prod_{j=t+1}^{k}(1-j^{-\nicefrac{1}{2}})  t^{-\nicefrac{3}{4}}
         \le \frac{18\eta}{(k+1)^{\nicefrac{1}{4}}} ~.
 \end{eqnarray*}
 % 
