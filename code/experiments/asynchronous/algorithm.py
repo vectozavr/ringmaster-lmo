@@ -6,6 +6,52 @@ from signature import Signature
 from asynchronous.asynchronous_transport import DelayedAsynchronousTransport, RandomDelayedAsynchronousTransport
 from concurrent.futures import ProcessPoolExecutor
 
+
+def _zeropower_via_newtonschulz5_numpy(gradient_matrix, steps):
+    """Approximate Muon's orthogonalization step with the Newton-Schulz iteration."""
+    assert gradient_matrix.ndim == 2
+    a, b, c = (3.4445, -4.7750, 2.0315)
+
+    update = np.array(gradient_matrix, dtype=np.float64, copy=True)
+    transposed = False
+    if update.shape[0] > update.shape[1]:
+        update = update.T
+        transposed = True
+
+    update /= np.linalg.norm(update) + 1e-7
+    for _ in range(steps):
+        gram = update @ update.T
+        update = a * update + (b * gram + c * gram @ gram) @ update
+
+    if transposed:
+        update = update.T
+    return update
+
+
+def _muon_update_numpy(gradient, momentum, beta=0.95, ns_steps=5, nesterov=True):
+    """Return Muon's orthogonalized update along with the updated momentum buffer.
+
+    In this repository the optimized point is a single vector, so 1D updates are treated
+    as 1 x d matrices before the Muon orthogonalization step.
+    """
+    next_momentum = beta * momentum + (1.0 - beta) * gradient
+    if nesterov:
+        update = beta * next_momentum + (1.0 - beta) * gradient
+    else:
+        update = next_momentum
+
+    original_shape = update.shape
+    if update.ndim == 1:
+        matrix_update = update.reshape(1, -1)
+    elif update.ndim == 2:
+        matrix_update = update
+    else:
+        matrix_update = update.reshape(update.shape[0], -1)
+
+    matrix_update = _zeropower_via_newtonschulz5_numpy(matrix_update, steps=ns_steps)
+    matrix_update *= np.sqrt(max(1.0, matrix_update.shape[0] / matrix_update.shape[1]))
+    return matrix_update.reshape(original_shape), next_momentum
+
 class FactoryAsyncMaster(Factory):
     pass
 
@@ -102,6 +148,89 @@ class RingmasterASGD(object):
     def get_point(self):
         return self._point
     
+    def get_time(self):
+        return self._time
+
+
+@FactoryAsyncMaster.register("RingmasterMuon")
+class RingmasterMuonASGD(object):
+    def __init__(
+        self,
+        transport,
+        point,
+        max_delay,
+        gamma=None,
+        gamma_multiply=None,
+        beta=0.95,
+        ns_steps=5,
+        nesterov=True,
+        seed=None,
+        meta=None,
+    ):
+        self._transport = transport
+        self._transport.reset_all_nodes(0)
+        self._point = point
+        if gamma_multiply is not None:
+            gamma *= gamma_multiply
+        self._gamma = gamma
+        self._max_delay = max_delay
+        self._beta = beta
+        self._ns_steps = ns_steps
+        self._nesterov = nesterov
+        self._seed = seed
+        self._time = 0
+
+        self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._heap = []
+        self._iter = 0
+        self._number_of_nodes = self._transport.get_number_of_nodes()
+        self._delays = np.array([0] * self._number_of_nodes)
+
+        for node_index in range(self._transport.get_number_of_nodes()):
+            available_time = self._transport.call_available_node_method(
+                self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+            heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+    def step(self):
+        available_time, node_index, iter = heapq.heappop(self._heap)
+        assert available_time != np.inf
+        self._time = available_time
+        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+
+        muon_update, self._momentum = _muon_update_numpy(
+            stochastic_gradient,
+            self._momentum,
+            beta=self._beta,
+            ns_steps=self._ns_steps,
+            nesterov=self._nesterov,
+        )
+        self._point = self._point - self._gamma * muon_update
+        self._iter += 1
+        available_time = self._transport.call_available_node_method(
+            self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+        heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+        self._delays += 1
+        self._delays[node_index] = 0
+        if np.max(self._delays) == self._max_delay:
+            indices = np.where(self._delays == self._max_delay)[0]
+            self._delays[indices] = 0
+            self._heap = [item for item in self._heap if item[1] not in indices]
+            heapq.heapify(self._heap)
+
+            for node_index in indices:
+                self._transport.ignore_node(self._time, node_index)
+                available_time = self._transport.call_available_node_method(
+                    self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+                heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+    def calculate_function(self):
+        return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
+                                                         point=self._point))
+
+    def get_point(self):
+        return self._point
+
     def get_time(self):
         return self._time
 

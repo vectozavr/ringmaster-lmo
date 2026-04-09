@@ -10,7 +10,13 @@ from tqdm import tqdm
 from function import StochasticTridiagonalQuadraticFunction
 from function import create_worst_case
 from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
-from asynchronous.algorithm import StochasticGradientNodeAlgorithm, AsynchronousSGD, RingmasterASGD, RennalaSGD
+from asynchronous.algorithm import (
+    StochasticGradientNodeAlgorithm,
+    AsynchronousSGD,
+    RingmasterASGD,
+    RingmasterMuonASGD,
+    RennalaSGD,
+)
 from signature import Signature
 
 sns.set(style="whitegrid", context="talk", font_scale=1.2, palette=sns.color_palette("bright"), color_codes=False)
@@ -26,36 +32,45 @@ colors = [
     "#C00000",
     "#B8860B",
     "#006666",
+    "#2F5D50",
 ]
 
 markers = [
     '*',
     '^',
     'H',
-    ]
+    'o',
+]
+
+
+def run_optimizer(optimizer, function, point, time_lim, objective):
+    x_0 = objective(point) - objective(analytical_solution)
+    iteration_grads = [np.linalg.norm(function.gradient(point)) ** 2]
+    iteration_points = [x_0]
+    iteration_times = [0]
+
+    while iteration_times[-1] < time_lim:
+        optimizer.step()
+        iteration_points.append(objective(optimizer.get_point()) - objective(analytical_solution))
+        iteration_times.append(optimizer.get_time())
+        iteration_grads.append(np.linalg.norm(function.gradient(optimizer.get_point())) ** 2)
+
+    return iteration_times, iteration_grads, iteration_points
 
 def greed_search(gammas, max_delays, time_lim, optimizer_name):
     best_performance = np.inf
     for gamma in gammas:
         for max_delay in max_delays:
             if optimizer_name == "RingmasterASGD":
-                optimizer = RingmasterASGD(transport, point, max_delay=max_delay, gamma=gamma)
+                optimizer = RingmasterASGD(transport, point.copy(), max_delay=max_delay, gamma=gamma)
+            elif optimizer_name == "RingmasterMuonASGD":
+                optimizer = RingmasterMuonASGD(transport, point.copy(), max_delay=max_delay, gamma=gamma)
             elif optimizer_name == "RennalaSGD":
-                optimizer = RennalaSGD(transport, point, gamma=gamma, batch_size=max_delay)
+                optimizer = RennalaSGD(transport, point.copy(), gamma=gamma, batch_size=max_delay)
             elif optimizer_name == "ASGD":
-                optimizer = AsynchronousSGD(transport, point, gamma=gamma, delay_adaptive=True)
-            
-            x_0 = f(point) - f(analytical_solution)
-            iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
-            iteration_points = [x_0]
-            iteration_times = [0]
+                optimizer = AsynchronousSGD(transport, point.copy(), gamma=gamma, delay_adaptive=True)
 
-            while iteration_times[-1] < time_lim:
-                optimizer.step()
-                iteration_points.append(f(optimizer.get_point()) - f(analytical_solution))
-                iteration_times.append(optimizer.get_time())
-                iteration_grads.append(np.linalg.norm(
-                    function.gradient(optimizer.get_point())) ** 2)
+            _, _, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
 
             performance = iteration_points[-1]
             print('performance:', performance,'gamma:', gamma,'max_delay:', max_delay)
@@ -135,24 +150,26 @@ point[0] = np.sqrt(dim)
 # gamma, max_delay = greed_search(gammas=gammas, max_delays=max_delays, time_lim=time_lim, optimizer_name="RingmasterASGD")
 # print(gamma, max_delay)
 
-optimizer = RingmasterASGD(transport, point, max_delay=6, gamma=0.25)
+optimizer = RingmasterASGD(transport, point.copy(), max_delay=6, gamma=0.25)
 print(optimizer.__class__.__name__)
+iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
+plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster ASGD: $\gamma=0.25$, $R=6$", linestyle='solid', marker=markers[0], markersize=18, markevery=max(1, len(iteration_times) // 10), color=colors[0])
 
-x_0 = f(point) - f(analytical_solution)
-iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
-iteration_points = [x_0]
-iteration_times = [0]
+'''
+gammas = [5**i for i in range(-5, 5)]
+max_delays = []
+a = num_nodes
+while a >= 1:
+     max_delays.append(a)
+     a //= 4
+gamma, max_delay = greed_search(gammas=gammas, max_delays=max_delays, time_lim=time_lim, optimizer_name="RingmasterMuonASGD")
+print(gamma, max_delay)
+'''
 
-
-while iteration_times[-1] < time_lim:
-    optimizer.step()
-    iteration_points.append(f(optimizer.get_point()) - f(analytical_solution))
-    iteration_times.append(optimizer.get_time())
-    iteration_grads.append(np.linalg.norm(
-        function.gradient(optimizer.get_point())) ** 2)
-
-
-plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster ASGD: $\gamma=0.2$, $R=6$", linestyle='solid', marker=markers[0], markersize=18, markevery=max(1, len(iteration_times) // 10), color=colors[0])
+optimizer = RingmasterMuonASGD(transport, point.copy(), max_delay=6, gamma=0.04)
+print(optimizer.__class__.__name__)
+iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
+plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster Muon: $\gamma=0.04$, $R=6$", linestyle='solid', marker=markers[3], markersize=14, markevery=max(1, len(iteration_times) // 10), color=colors[3])
 
 
 # gammas = [5**i for i in range(-5, 5)]
@@ -163,47 +180,19 @@ plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster ASGD: $\gamma=
 #     a //= 4
 # gamma, batch_size = greed_search(gammas=gammas, max_delays=batch_sizes, time_lim=time_lim, optimizer_name="RennalaSGD")
 # print(gamma, batch_size)
-optimizer = RennalaSGD(transport, point, gamma=1, batch_size=6) # tuned parameters
+optimizer = RennalaSGD(transport, point.copy(), gamma=1, batch_size=6) # tuned parameters
 print(optimizer.__class__.__name__)
-
-x_0 = f(point) - f(analytical_solution)
-iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
-iteration_points = [x_0]
-iteration_times = [0]
-
-
-while iteration_times[-1] < time_lim:
-    optimizer.step()
-    iteration_points.append(f(optimizer.get_point()) - f(analytical_solution))
-    iteration_times.append(optimizer.get_time())
-    iteration_grads.append(np.linalg.norm(
-        function.gradient(optimizer.get_point())) ** 2)
-
-
+iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
 plt.semilogy(iteration_times, iteration_grads, label=r"Rennala SGD: $\gamma=1$, $B=6$", linestyle='solid', marker=markers[2], markersize=16, markevery=max(1, len(iteration_times) // 10), color=colors[2],)
 
 
 # gammas = [5**i for i in range(-5, 5)]
 # gamma, max_delay = greed_search(gammas=gammas, max_delays=['na'], time_lim=time_lim, optimizer_name="ASGD")
 # print('Best gamma:', gamma)
-optimizer = AsynchronousSGD(transport, point, gamma=0.00032, delay_adaptive=True)
+optimizer = AsynchronousSGD(transport, point.copy(), gamma=0.00032, delay_adaptive=True)
 
 print(optimizer.__class__.__name__)
-
-x_0 = f(point) - f(analytical_solution)
-iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
-iteration_points = [x_0]
-iteration_times = [0]
-
-
-while iteration_times[-1] < time_lim:
-    optimizer.step()
-    iteration_points.append(f(optimizer.get_point()) - f(analytical_solution))
-    iteration_times.append(optimizer.get_time())
-    iteration_grads.append(np.linalg.norm(
-        function.gradient(optimizer.get_point())) ** 2)
-
-
+iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
 plt.semilogy(iteration_times, iteration_grads, label=r"Delay-Adaptive ASGD: $\gamma=0.00032$", linestyle='solid', marker=markers[1], markersize=16, markevery=max(1, len(iteration_times) // 10), color=colors[1])
 
 
