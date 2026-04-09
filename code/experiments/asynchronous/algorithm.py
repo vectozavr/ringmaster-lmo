@@ -1,5 +1,6 @@
 import heapq
 import numpy as np
+import torch
 from factory import Factory
 from function import OptimizationProblemMeta
 from signature import Signature
@@ -7,11 +8,28 @@ from asynchronous.asynchronous_transport import DelayedAsynchronousTransport, Ra
 from concurrent.futures import ProcessPoolExecutor
 
 
+POLAR_EXPRESS_COEFFS = [
+    (8.156554524902461, -22.48329292557795, 15.878769915207462),
+    (4.042929935166739, -2.808917465908714, 0.5000178451051316),
+    (3.8916678022926607, -2.772484153217685, 0.5060648178503393),
+    (3.285753657755655, -2.3681294933425376, 0.46449024233003106),
+    (2.3465413258596377, -1.7097828382687081, 0.42323551169305323),
+]
+
+
+def _is_torch_tensor(value):
+    return isinstance(value, torch.Tensor)
+
+
+def _point_numel(point):
+    if _is_torch_tensor(point):
+        return point.numel()
+    return point.size
+
+
 def _zeropower_via_newtonschulz5_numpy(gradient_matrix, steps):
     """Approximate Muon's orthogonalization step with the Newton-Schulz iteration."""
     assert gradient_matrix.ndim == 2
-    a, b, c = (3.4445, -4.7750, 2.0315)
-
     update = np.array(gradient_matrix, dtype=np.float64, copy=True)
     transposed = False
     if update.shape[0] > update.shape[1]:
@@ -19,13 +37,31 @@ def _zeropower_via_newtonschulz5_numpy(gradient_matrix, steps):
         transposed = True
 
     update /= np.linalg.norm(update) + 1e-7
-    for _ in range(steps):
+    for a, b, c in POLAR_EXPRESS_COEFFS[:steps]:
         gram = update @ update.T
         update = a * update + (b * gram + c * gram @ gram) @ update
 
     if transposed:
         update = update.T
     return update
+
+
+def _zeropower_via_newtonschulz5_torch(gradient_matrix, steps):
+    assert gradient_matrix.ndim == 2
+    update = gradient_matrix.to(dtype=torch.float32)
+    transposed = False
+    if update.shape[0] > update.shape[1]:
+        update = update.transpose(0, 1)
+        transposed = True
+
+    update = update / (torch.linalg.norm(update) + 1e-7)
+    for a, b, c in POLAR_EXPRESS_COEFFS[:steps]:
+        gram = update @ update.transpose(0, 1)
+        update = a * update + (b * gram + c * gram @ gram) @ update
+
+    if transposed:
+        update = update.transpose(0, 1)
+    return update.to(dtype=gradient_matrix.dtype)
 
 
 def _muon_update_numpy(gradient, momentum, beta=0.95, ns_steps=5, nesterov=True):
@@ -53,8 +89,37 @@ def _muon_update_numpy(gradient, momentum, beta=0.95, ns_steps=5, nesterov=True)
     return matrix_update.reshape(original_shape), next_momentum
 
 
+def _muon_update_torch(gradient, momentum, beta=0.95, ns_steps=5, nesterov=True):
+    next_momentum = beta * momentum + (1.0 - beta) * gradient
+    if nesterov:
+        update = beta * next_momentum + (1.0 - beta) * gradient
+    else:
+        update = next_momentum
+
+    original_shape = update.shape
+    if update.ndim == 1:
+        matrix_update = update.reshape(1, -1)
+    elif update.ndim == 2:
+        matrix_update = update
+    else:
+        matrix_update = update.reshape(update.shape[0], -1)
+
+    matrix_update = _zeropower_via_newtonschulz5_torch(matrix_update, steps=ns_steps)
+    matrix_update = matrix_update * (max(1.0, matrix_update.shape[0] / matrix_update.shape[1]) ** 0.5)
+    return matrix_update.reshape(original_shape), next_momentum
+
+
 def _momentum_update_numpy(gradient, momentum, beta=0.95, nesterov=True):
     """Momentum fallback for parameters where Muon should not be applied."""
+    next_momentum = beta * momentum + (1.0 - beta) * gradient
+    if nesterov:
+        update = beta * next_momentum + (1.0 - beta) * gradient
+    else:
+        update = next_momentum
+    return update, next_momentum
+
+
+def _momentum_update_torch(gradient, momentum, beta=0.95, nesterov=True):
     next_momentum = beta * momentum + (1.0 - beta) * gradient
     if nesterov:
         update = beta * next_momentum + (1.0 - beta) * gradient
@@ -107,6 +172,36 @@ def _structured_muon_update_numpy(gradient, momentum, parameter_infos, beta=0.95
             )
         else:
             update_block, next_momentum_block = _momentum_update_numpy(
+                grad_block,
+                momentum_block,
+                beta=beta,
+                nesterov=nesterov,
+            )
+        update[shift:shift + size] = update_block.reshape(-1)
+        next_momentum[shift:shift + size] = next_momentum_block.reshape(-1)
+        shift += size
+    return update, next_momentum
+
+
+def _structured_muon_update_torch(gradient, momentum, parameter_infos, beta=0.95, ns_steps=5, nesterov=True):
+    update = torch.zeros_like(gradient)
+    next_momentum = torch.zeros_like(momentum)
+    shift = 0
+    for info in parameter_infos:
+        size = info["size"]
+        shape = info["shape"]
+        grad_block = gradient[shift:shift + size].view(shape)
+        momentum_block = momentum[shift:shift + size].view(shape)
+        if info["use_muon"] and len(shape) >= 2:
+            update_block, next_momentum_block = _muon_update_torch(
+                grad_block,
+                momentum_block,
+                beta=beta,
+                ns_steps=ns_steps,
+                nesterov=nesterov,
+            )
+        else:
+            update_block, next_momentum_block = _momentum_update_torch(
                 grad_block,
                 momentum_block,
                 beta=beta,
@@ -245,8 +340,11 @@ class RingmasterMuonASGD(object):
         self._seed = seed
         self._time = 0
 
-        self._momentum = np.zeros_like(self._point, dtype=np.float64)
-        self._parameter_infos = _build_parameter_infos(meta, self._point.size)
+        if _is_torch_tensor(self._point):
+            self._momentum = torch.zeros_like(self._point)
+        else:
+            self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._parameter_infos = _build_parameter_infos(meta, _point_numel(self._point))
         self._heap = []
         self._iter = 0
         self._number_of_nodes = self._transport.get_number_of_nodes()
@@ -264,22 +362,41 @@ class RingmasterMuonASGD(object):
         stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
 
         if self._parameter_infos is None:
-            muon_update, self._momentum = _muon_update_numpy(
-                stochastic_gradient,
-                self._momentum,
-                beta=self._beta,
-                ns_steps=self._ns_steps,
-                nesterov=self._nesterov,
-            )
+            if _is_torch_tensor(stochastic_gradient):
+                muon_update, self._momentum = _muon_update_torch(
+                    stochastic_gradient,
+                    self._momentum,
+                    beta=self._beta,
+                    ns_steps=self._ns_steps,
+                    nesterov=self._nesterov,
+                )
+            else:
+                muon_update, self._momentum = _muon_update_numpy(
+                    stochastic_gradient,
+                    self._momentum,
+                    beta=self._beta,
+                    ns_steps=self._ns_steps,
+                    nesterov=self._nesterov,
+                )
         else:
-            muon_update, self._momentum = _structured_muon_update_numpy(
-                stochastic_gradient,
-                self._momentum,
-                self._parameter_infos,
-                beta=self._beta,
-                ns_steps=self._ns_steps,
-                nesterov=self._nesterov,
-            )
+            if _is_torch_tensor(stochastic_gradient):
+                muon_update, self._momentum = _structured_muon_update_torch(
+                    stochastic_gradient,
+                    self._momentum,
+                    self._parameter_infos,
+                    beta=self._beta,
+                    ns_steps=self._ns_steps,
+                    nesterov=self._nesterov,
+                )
+            else:
+                muon_update, self._momentum = _structured_muon_update_numpy(
+                    stochastic_gradient,
+                    self._momentum,
+                    self._parameter_infos,
+                    beta=self._beta,
+                    ns_steps=self._ns_steps,
+                    nesterov=self._nesterov,
+                )
         self._point = self._point - self._gamma * muon_update
         self._iter += 1
         available_time = self._transport.call_available_node_method(

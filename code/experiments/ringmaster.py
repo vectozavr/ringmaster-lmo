@@ -20,7 +20,7 @@ from asynchronous.algorithm import (
     StochasticGradientNodeAlgorithm,
 )
 from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
-from nanochat_async import NanochatConfig, NanochatLanguageModelFunction
+from nanochat_async import DEPTH, NanochatLanguageModelFunction
 from signature import Signature
 
 
@@ -79,32 +79,21 @@ def build_transport(function, num_nodes, seed):
 
 def main():
     experiment_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(experiment_dir, "data")
-
-    config = NanochatConfig(
-        sequence_len=64,
-        n_layer=2,
-        n_head=4,
-        n_embd=64,
-        dropout=0.0,
-    )
-
-    num_nodes = int(os.environ.get("RINGMASTER_NUM_NODES", "16"))
+    num_nodes = int(os.environ.get("RINGMASTER_NUM_NODES", "8"))
     time_lim = float(os.environ.get("RINGMASTER_TIME_LIM", "300"))
-    eval_interval = float(os.environ.get("RINGMASTER_EVAL_INTERVAL", "4"))
+    eval_interval = float(os.environ.get("RINGMASTER_EVAL_INTERVAL", "20"))
     seed = 7
 
     function = NanochatLanguageModelFunction(
-        data_dir=data_dir,
-        config=config,
         seed=seed,
-        batch_size=8,
-        eval_batch_size=8,
-        eval_batches=6,
+        device_batch_size=int(os.environ.get("RINGMASTER_DEVICE_BATCH_SIZE", "2")),
+        eval_batch_size=int(os.environ.get("RINGMASTER_EVAL_BATCH_SIZE", "2")),
+        num_shards=int(os.environ.get("AUTORESEARCH_NUM_SHARDS", "2")),
         is_cuda=torch.cuda.is_available(),
     )
     point = function.get_current_point()
     muon_meta = function.parameter_metadata()
+    print(f"Nanochat config: {muon_meta['model_config']}")
 
     experiments = [
         (
@@ -113,9 +102,9 @@ def main():
                 build_transport(function, num_nodes, seed=11),
                 point.copy(),
                 max_delay=4,
-                gamma=0.01,
+                gamma=float(os.environ.get("RINGMASTER_ASGD_GAMMA", "0.001")),
             ),
-            dict(color=colors[0], marker=markers[0], markersize=18, label="Ringmaster ASGD: gamma=0.01, R=4"),
+            dict(color=colors[0], marker=markers[0], markersize=18, label="Ringmaster ASGD"),
         ),
         (
             "Ringmaster Muon",
@@ -123,32 +112,32 @@ def main():
                 build_transport(function, num_nodes, seed=13),
                 point.copy(),
                 max_delay=4,
-                gamma=0.02,
-                beta=0.95,
+                gamma=float(os.environ.get("RINGMASTER_MUON_GAMMA", "0.004")),
+                beta=float(os.environ.get("RINGMASTER_MUON_BETA", "0.95")),
                 ns_steps=5,
                 meta=muon_meta,
             ),
-            dict(color=colors[3], marker=markers[3], markersize=14, label="Ringmaster Muon: gamma=0.02, R=4"),
+            dict(color=colors[3], marker=markers[3], markersize=14, label="Ringmaster Muon"),
         ),
         (
             "Rennala SGD",
             RennalaSGD(
                 build_transport(function, num_nodes, seed=17),
                 point.copy(),
-                gamma=0.02,
+                gamma=float(os.environ.get("RENNALA_GAMMA", "0.002")),
                 batch_size=4,
             ),
-            dict(color=colors[2], marker=markers[2], markersize=16, label="Rennala SGD: gamma=0.02, B=4"),
+            dict(color=colors[2], marker=markers[2], markersize=16, label="Rennala SGD"),
         ),
         (
             "Delay-Adaptive ASGD",
             AsynchronousSGD(
                 build_transport(function, num_nodes, seed=19),
                 point.copy(),
-                gamma=0.002,
+                gamma=float(os.environ.get("DELAY_ADAPTIVE_GAMMA", "0.0002")),
                 delay_adaptive=True,
             ),
-            dict(color=colors[1], marker=markers[1], markersize=16, label="Delay-Adaptive ASGD: gamma=0.002"),
+            dict(color=colors[1], marker=markers[1], markersize=16, label="Delay-Adaptive ASGD"),
         ),
     ]
 
@@ -172,8 +161,8 @@ def main():
     plt.legend(loc="upper right", prop={"size": 14})
     plt.xlim(0, time_lim)
     plt.xlabel("Runtime (seconds)")
-    plt.ylabel("Validation Loss")
-    plt.title("Nanochat Async Training Comparison")
+    plt.ylabel("Validation BPB")
+    plt.title(f"Nanochat Async Training Comparison (depth={DEPTH})")
 
     if os.environ.get("DISPLAY"):
         plt.show()
