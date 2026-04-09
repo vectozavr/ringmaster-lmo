@@ -1,32 +1,38 @@
-import matplotlib
-matplotlib.use("TkAgg")
+import os
 
-import numpy as np
 import matplotlib
+
+if os.environ.get("DISPLAY"):
+    matplotlib.use("TkAgg")
+else:
+    matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
-from tqdm import tqdm
+import torch
 
-from function import StochasticTridiagonalQuadraticFunction
-from function import create_worst_case
-from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
 from asynchronous.algorithm import (
-    StochasticGradientNodeAlgorithm,
     AsynchronousSGD,
     RingmasterASGD,
     RingmasterMuonASGD,
     RennalaSGD,
+    StochasticGradientNodeAlgorithm,
 )
+from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
+from nanochat_async import NanochatConfig, NanochatLanguageModelFunction
 from signature import Signature
 
-sns.set(style="whitegrid", context="talk", font_scale=1.2, palette=sns.color_palette("bright"), color_codes=False)
-matplotlib.rcParams['pdf.fonttype'] = 42
-matplotlib.rcParams['ps.fonttype'] = 42
-matplotlib.rcParams['font.family'] = 'sans-serif'
-matplotlib.rcParams['font.sans-serif'] = 'DejaVu Sans'
-matplotlib.rcParams['mathtext.fontset'] = 'cm'
-matplotlib.rcParams['figure.figsize'] = (10, 7)
-matplotlib.rcParams['text.usetex'] = True
+
+sns.set(style="whitegrid", context="talk", font_scale=1.1, palette=sns.color_palette("bright"), color_codes=False)
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
+matplotlib.rcParams["font.family"] = "sans-serif"
+matplotlib.rcParams["font.sans-serif"] = "DejaVu Sans"
+matplotlib.rcParams["mathtext.fontset"] = "cm"
+matplotlib.rcParams["figure.figsize"] = (10, 7)
+matplotlib.rcParams["text.usetex"] = False
+
 
 colors = [
     "#C00000",
@@ -36,188 +42,146 @@ colors = [
 ]
 
 markers = [
-    '*',
-    '^',
-    'H',
-    'o',
+    "*",
+    "^",
+    "H",
+    "o",
 ]
 
 
-def run_optimizer(optimizer, function, point, time_lim, objective):
-    x_0 = objective(point) - objective(analytical_solution)
-    iteration_grads = [np.linalg.norm(function.gradient(point)) ** 2]
-    iteration_points = [x_0]
-    iteration_times = [0]
+def run_optimizer(optimizer, function, point, time_lim, eval_interval):
+    iteration_times = [0.0]
+    iteration_losses = [function.value(point)]
+    next_eval_time = eval_interval
 
     while iteration_times[-1] < time_lim:
         optimizer.step()
-        iteration_points.append(objective(optimizer.get_point()) - objective(analytical_solution))
-        iteration_times.append(optimizer.get_time())
-        iteration_grads.append(np.linalg.norm(function.gradient(optimizer.get_point())) ** 2)
+        current_time = optimizer.get_time()
+        if current_time >= next_eval_time or current_time >= time_lim:
+            iteration_times.append(min(current_time, time_lim))
+            iteration_losses.append(function.value(optimizer.get_point()))
+            next_eval_time += eval_interval
 
-    return iteration_times, iteration_grads, iteration_points
-
-def greed_search(gammas, max_delays, time_lim, optimizer_name):
-    best_performance = np.inf
-    for gamma in gammas:
-        for max_delay in max_delays:
-            if optimizer_name == "RingmasterASGD":
-                optimizer = RingmasterASGD(transport, point.copy(), max_delay=max_delay, gamma=gamma)
-            elif optimizer_name == "RingmasterMuonASGD":
-                optimizer = RingmasterMuonASGD(transport, point.copy(), max_delay=max_delay, gamma=gamma)
-            elif optimizer_name == "RennalaSGD":
-                optimizer = RennalaSGD(transport, point.copy(), gamma=gamma, batch_size=max_delay)
-            elif optimizer_name == "ASGD":
-                optimizer = AsynchronousSGD(transport, point.copy(), gamma=gamma, delay_adaptive=True)
-
-            _, _, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
-
-            performance = iteration_points[-1]
-            print('performance:', performance,'gamma:', gamma,'max_delay:', max_delay)
-            if performance < best_performance:
-                best_performance = performance
-                best_params = (gamma, max_delay)
-
-    return best_params
-        
-
-"""
-Function Setup: this is the quadratic function used in the paper
-"""
-dim = 1729
-num_nodes = 6174
-
-seed = 26  # seed correspondence to randomness in stochastic gradients
-noise = 0.01
-sigma2 = noise
-
-time_lim = 2*1e3
-
-# Function setup for known sigma
-main_diag, side_diag, b = create_worst_case(dim, 1)
-stochastic_func = StochasticTridiagonalQuadraticFunction(main_diag, side_diag, b,
-                                                         seed, noise, "add")
-function = stochastic_func._tridiagonal_quadratic
-
-analytical_solution = np.linalg.solve(function._A.toarray(), function._b)
-f = lambda x: 1/2 * x.T @ function._A @ x - function._b.T @ x
-fx_star = f(analytical_solution)
-
-print(fx_star)
-
-"""
-Time Setup: setup randomness for each node
-"""
-delays_1 = np.arange(2, num_nodes//2 + 2)
-delays_2 = np.array([i**3 for i in range(num_nodes//2, num_nodes)])
-delays = np.concatenate((delays_1, delays_2))
-assert len(delays) == num_nodes
-# delays = np.array([1 + i*4 for i in range(num_nodes)])
-delays = np.array([1 + np.sqrt(i) for i in range(num_nodes)])
-# delays = np.array([1 + i for i in range(num_nodes)])
-# delays = np.array(2 + 20 * np.arange(num_nodes))
-# np.random.shuffle(delays)
-
-generator = np.random.default_rng(seed=5)
-# sigma_normal = 10
-def halfnormal(index):
-    return np.abs(generator.normal(loc=0,scale=np.sqrt(index+1)))
-    
-noise_function = halfnormal
-
-"""
-Transport Setup: building random time for optimizers
-"""
-nodes = [Signature(StochasticGradientNodeAlgorithm, stochastic_func) for _ in range(num_nodes)]
-transport = RandomDelayedAsynchronousTransport(nodes, delays, noise_function)
+    return iteration_times, iteration_losses
 
 
-"""
-Optimizer setup
-"""
-# initial point
-point = np.zeros(dim)
-point[0] = np.sqrt(dim)
+def build_transport(function, num_nodes, seed):
+    delays = np.array([1.0 + np.sqrt(i + 1) for i in range(num_nodes)], dtype=np.float64)
+    generator = np.random.default_rng(seed=seed)
+
+    def halfnormal(index):
+        return np.abs(generator.normal(loc=0.0, scale=np.sqrt(index + 1) * 0.05))
+
+    nodes = [Signature(StochasticGradientNodeAlgorithm, function) for _ in range(num_nodes)]
+    transport = RandomDelayedAsynchronousTransport(nodes, delays, halfnormal)
+    return transport
 
 
+def main():
+    experiment_dir = os.path.dirname(__file__)
+    data_dir = os.path.join(experiment_dir, "data")
 
-# gammas = [5**i for i in range(-5, 5)]
-# max_delays = []
-# a = num_nodes
-# while a >= 1:
-#     max_delays.append(a)
-#     a //= 4
-# gamma, max_delay = greed_search(gammas=gammas, max_delays=max_delays, time_lim=time_lim, optimizer_name="RingmasterASGD")
-# print(gamma, max_delay)
+    config = NanochatConfig(
+        sequence_len=64,
+        n_layer=2,
+        n_head=4,
+        n_embd=64,
+        dropout=0.0,
+    )
 
-optimizer = RingmasterASGD(transport, point.copy(), max_delay=6, gamma=0.25)
-print(optimizer.__class__.__name__)
-iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
-plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster ASGD: $\gamma=0.25$, $R=6$", linestyle='solid', marker=markers[0], markersize=18, markevery=max(1, len(iteration_times) // 10), color=colors[0])
+    num_nodes = int(os.environ.get("RINGMASTER_NUM_NODES", "16"))
+    time_lim = float(os.environ.get("RINGMASTER_TIME_LIM", "300"))
+    eval_interval = float(os.environ.get("RINGMASTER_EVAL_INTERVAL", "4"))
+    seed = 7
 
-'''
-gammas = [5**i for i in range(-5, 5)]
-max_delays = []
-a = num_nodes
-while a >= 1:
-     max_delays.append(a)
-     a //= 4
-gamma, max_delay = greed_search(gammas=gammas, max_delays=max_delays, time_lim=time_lim, optimizer_name="RingmasterMuonASGD")
-print(gamma, max_delay)
-'''
+    function = NanochatLanguageModelFunction(
+        data_dir=data_dir,
+        config=config,
+        seed=seed,
+        batch_size=8,
+        eval_batch_size=8,
+        eval_batches=6,
+        is_cuda=torch.cuda.is_available(),
+    )
+    point = function.get_current_point()
+    muon_meta = function.parameter_metadata()
 
-optimizer = RingmasterMuonASGD(transport, point.copy(), max_delay=6, gamma=0.04)
-print(optimizer.__class__.__name__)
-iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
-plt.semilogy(iteration_times, iteration_grads, label=r"Ringmaster Muon: $\gamma=0.04$, $R=6$", linestyle='solid', marker=markers[3], markersize=14, markevery=max(1, len(iteration_times) // 10), color=colors[3])
+    experiments = [
+        (
+            "Ringmaster ASGD",
+            RingmasterASGD(
+                build_transport(function, num_nodes, seed=11),
+                point.copy(),
+                max_delay=4,
+                gamma=0.01,
+            ),
+            dict(color=colors[0], marker=markers[0], markersize=18, label="Ringmaster ASGD: gamma=0.01, R=4"),
+        ),
+        (
+            "Ringmaster Muon",
+            RingmasterMuonASGD(
+                build_transport(function, num_nodes, seed=13),
+                point.copy(),
+                max_delay=4,
+                gamma=0.02,
+                beta=0.95,
+                ns_steps=5,
+                meta=muon_meta,
+            ),
+            dict(color=colors[3], marker=markers[3], markersize=14, label="Ringmaster Muon: gamma=0.02, R=4"),
+        ),
+        (
+            "Rennala SGD",
+            RennalaSGD(
+                build_transport(function, num_nodes, seed=17),
+                point.copy(),
+                gamma=0.02,
+                batch_size=4,
+            ),
+            dict(color=colors[2], marker=markers[2], markersize=16, label="Rennala SGD: gamma=0.02, B=4"),
+        ),
+        (
+            "Delay-Adaptive ASGD",
+            AsynchronousSGD(
+                build_transport(function, num_nodes, seed=19),
+                point.copy(),
+                gamma=0.002,
+                delay_adaptive=True,
+            ),
+            dict(color=colors[1], marker=markers[1], markersize=16, label="Delay-Adaptive ASGD: gamma=0.002"),
+        ),
+    ]
+
+    for name, optimizer, plot_kwargs in experiments:
+        print(name)
+        iteration_times, iteration_losses = run_optimizer(
+            optimizer=optimizer,
+            function=function,
+            point=point,
+            time_lim=time_lim,
+            eval_interval=eval_interval,
+        )
+        plt.semilogy(
+            iteration_times,
+            iteration_losses,
+            linestyle="solid",
+            markevery=max(1, len(iteration_times) // 10),
+            **plot_kwargs,
+        )
+
+    plt.legend(loc="upper right", prop={"size": 14})
+    plt.xlim(0, time_lim)
+    plt.xlabel("Runtime (seconds)")
+    plt.ylabel("Validation Loss")
+    plt.title("Nanochat Async Training Comparison")
+
+    if os.environ.get("DISPLAY"):
+        plt.show()
+    else:
+        output_path = os.path.join(experiment_dir, "ringmaster_nanochat.png")
+        plt.savefig(output_path, bbox_inches="tight")
+        print(f"Saved plot to {output_path}")
 
 
-# gammas = [5**i for i in range(-5, 5)]
-# batch_sizes = []
-# a = num_nodes
-# while a >= 1:
-#     batch_sizes.append(a)
-#     a //= 4
-# gamma, batch_size = greed_search(gammas=gammas, max_delays=batch_sizes, time_lim=time_lim, optimizer_name="RennalaSGD")
-# print(gamma, batch_size)
-optimizer = RennalaSGD(transport, point.copy(), gamma=1, batch_size=6) # tuned parameters
-print(optimizer.__class__.__name__)
-iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
-plt.semilogy(iteration_times, iteration_grads, label=r"Rennala SGD: $\gamma=1$, $B=6$", linestyle='solid', marker=markers[2], markersize=16, markevery=max(1, len(iteration_times) // 10), color=colors[2],)
-
-
-# gammas = [5**i for i in range(-5, 5)]
-# gamma, max_delay = greed_search(gammas=gammas, max_delays=['na'], time_lim=time_lim, optimizer_name="ASGD")
-# print('Best gamma:', gamma)
-optimizer = AsynchronousSGD(transport, point.copy(), gamma=0.00032, delay_adaptive=True)
-
-print(optimizer.__class__.__name__)
-iteration_times, iteration_grads, iteration_points = run_optimizer(optimizer, function, point, time_lim, f)
-plt.semilogy(iteration_times, iteration_grads, label=r"Delay-Adaptive ASGD: $\gamma=0.00032$", linestyle='solid', marker=markers[1], markersize=16, markevery=max(1, len(iteration_times) // 10), color=colors[1])
-
-
-
-# optimizer = RingmasterASGD_adaptive(transport, point, max_delay=6, gamma=0.15)
-# print(optimizer.__class__.__name__)
-
-# x_0 = f(point) - f(analytical_solution)
-# iteration_grads = [np.linalg.norm(function.gradient(point)) **2]
-# iteration_points = [x_0]
-# iteration_times = [0]
-
-
-# while iteration_times[-1] < time_lim:
-#     optimizer.step()
-#     iteration_times.append(optimizer.get_time())
-#     iteration_grads.append(np.linalg.norm(
-#         function.gradient(optimizer.get_point())) ** 2)
-
-
-# plt.semilogy(iteration_times, iteration_grads, label=r"Adaptive Ringmaster ASGD: $\gamma=0.2$, $R=6$", linestyle='solid', color='purple', alpha = 0.6)
-
-
-plt.legend(loc='upper right', prop={'size': 16})
-plt.xlim(0, time_lim)
-plt.xlabel("Runtime (seconds)")
-plt.ylabel(r"$f(x^t)-f^{\inf}$")
-plt.show()
+if __name__ == "__main__":
+    main()

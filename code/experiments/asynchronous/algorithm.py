@@ -52,6 +52,71 @@ def _muon_update_numpy(gradient, momentum, beta=0.95, ns_steps=5, nesterov=True)
     matrix_update *= np.sqrt(max(1.0, matrix_update.shape[0] / matrix_update.shape[1]))
     return matrix_update.reshape(original_shape), next_momentum
 
+
+def _momentum_update_numpy(gradient, momentum, beta=0.95, nesterov=True):
+    """Momentum fallback for parameters where Muon should not be applied."""
+    next_momentum = beta * momentum + (1.0 - beta) * gradient
+    if nesterov:
+        update = beta * next_momentum + (1.0 - beta) * gradient
+    else:
+        update = next_momentum
+    return update, next_momentum
+
+
+def _build_parameter_infos(meta, point_dim):
+    if not isinstance(meta, dict):
+        return None
+    raw_infos = meta.get("parameter_infos")
+    if not raw_infos:
+        return None
+
+    parameter_infos = []
+    total_size = 0
+    for info in raw_infos:
+        shape = tuple(info["shape"])
+        size = int(np.prod(shape))
+        parameter_infos.append({
+            "shape": shape,
+            "size": size,
+            "use_muon": bool(info.get("use_muon", len(shape) >= 2)),
+        })
+        total_size += size
+
+    if total_size != point_dim:
+        raise ValueError(f"Parameter metadata size mismatch: expected {point_dim}, got {total_size}")
+    return parameter_infos
+
+
+def _structured_muon_update_numpy(gradient, momentum, parameter_infos, beta=0.95, ns_steps=5, nesterov=True):
+    """Apply Muon blockwise to structured parameters and momentum-SGD elsewhere."""
+    update = np.zeros_like(gradient, dtype=np.float64)
+    next_momentum = np.zeros_like(momentum, dtype=np.float64)
+    shift = 0
+    for info in parameter_infos:
+        size = info["size"]
+        shape = info["shape"]
+        grad_block = gradient[shift:shift + size].reshape(shape)
+        momentum_block = momentum[shift:shift + size].reshape(shape)
+        if info["use_muon"] and len(shape) >= 2:
+            update_block, next_momentum_block = _muon_update_numpy(
+                grad_block,
+                momentum_block,
+                beta=beta,
+                ns_steps=ns_steps,
+                nesterov=nesterov,
+            )
+        else:
+            update_block, next_momentum_block = _momentum_update_numpy(
+                grad_block,
+                momentum_block,
+                beta=beta,
+                nesterov=nesterov,
+            )
+        update[shift:shift + size] = update_block.reshape(-1)
+        next_momentum[shift:shift + size] = next_momentum_block.reshape(-1)
+        shift += size
+    return update, next_momentum
+
 class FactoryAsyncMaster(Factory):
     pass
 
@@ -181,6 +246,7 @@ class RingmasterMuonASGD(object):
         self._time = 0
 
         self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._parameter_infos = _build_parameter_infos(meta, self._point.size)
         self._heap = []
         self._iter = 0
         self._number_of_nodes = self._transport.get_number_of_nodes()
@@ -197,13 +263,23 @@ class RingmasterMuonASGD(object):
         self._time = available_time
         stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
 
-        muon_update, self._momentum = _muon_update_numpy(
-            stochastic_gradient,
-            self._momentum,
-            beta=self._beta,
-            ns_steps=self._ns_steps,
-            nesterov=self._nesterov,
-        )
+        if self._parameter_infos is None:
+            muon_update, self._momentum = _muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        else:
+            muon_update, self._momentum = _structured_muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                self._parameter_infos,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
         self._point = self._point - self._gamma * muon_update
         self._iter += 1
         available_time = self._transport.call_available_node_method(
