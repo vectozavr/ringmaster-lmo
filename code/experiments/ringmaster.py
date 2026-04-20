@@ -235,10 +235,60 @@ def candidate_param_sets(method_name):
         yield dict(zip(keys, values))
 
 
-def tune_method(method_name, time_lim, metric_name, num_trials, aggregator):
+def tuning_plot_path(method_name):
+    method_slug = method_name.replace("ASGD", "").replace("SGD", "")
+    method_slug = method_slug.replace("ParameterAgnostic", "parameter_agnostic_")
+    method_slug = "".join(char.lower() if char.isalnum() else "_" for char in method_slug)
+    while "__" in method_slug:
+        method_slug = method_slug.replace("__", "_")
+    method_slug = method_slug.strip("_")
+    return os.path.join(os.path.dirname(__file__), f"tuning_{method_slug}_method.pdf")
+
+
+def format_params_for_tuning_label(params):
+    return ", ".join(f"{name}={value}" for name, value in params.items())
+
+
+def format_method_name(method_name):
+    if method_name == "RingmasterMuonASGD":
+        return "Ringmaster Muon"
+    if method_name == "ParameterAgnosticRingmasterMuonASGD":
+        return "Parameter-Agnostic Ringmaster Muon"
+    if method_name == "RennalaMuonSGD":
+        return "Rennala Muon"
+    if method_name == "DelayAdaptiveMuonASGD":
+        return "Delay-Adaptive Muon"
+    raise ValueError(f"Unknown method {method_name}")
+
+
+def plot_tuning_lines_for_method(method_name, metric_name, time_lim, traces_by_params):
+    plt.figure()
+    for params, trace in traces_by_params:
+        plt.semilogy(
+            trace["runtime"],
+            trace[metric_name],
+            label=format_params_for_tuning_label(params),
+            linestyle="solid",
+            alpha=0.85,
+        )
+
+    plt.legend(loc="best", prop={"size": 10})
+    plt.xlim(0, time_lim)
+    plt.xlabel("Runtime (seconds)")
+    plt.ylabel(metric_to_plot_label(metric_name))
+    plt.title(f"Tuning {format_method_name(method_name)} method")
+    plt.tight_layout()
+    output_path = tuning_plot_path(method_name)
+    plt.savefig(output_path, bbox_inches="tight")
+    plt.close()
+    print(f"Saved tuning plot to {output_path}")
+
+
+def tune_method(method_name, time_lim, metric_name, num_trials, aggregator, plot_lines=False):
     best_score = np.inf
     best_params = None
     best_trial_scores = None
+    traces_by_params = []
 
     for params in candidate_param_sets(method_name):
         trial_scores = []
@@ -250,6 +300,8 @@ def tune_method(method_name, time_lim, metric_name, num_trials, aggregator):
                 problem_seed=PROBLEM_SEED + trial_index,
                 delay_seed=TRANSPORT_SEED + trial_index,
             )
+            if plot_lines and trial_index == 0:
+                traces_by_params.append((dict(params), trace))
             trial_scores.append(score_trace(trace, metric_name))
 
         aggregate_score = float(np.mean(trial_scores) if aggregator == "mean" else np.median(trial_scores))
@@ -263,6 +315,9 @@ def tune_method(method_name, time_lim, metric_name, num_trials, aggregator):
             best_params = dict(params)
             best_trial_scores = [float(score) for score in trial_scores]
 
+    if plot_lines:
+        plot_tuning_lines_for_method(method_name, metric_name, time_lim, traces_by_params)
+
     return {
         "params": best_params,
         "score": float(best_score),
@@ -273,11 +328,18 @@ def tune_method(method_name, time_lim, metric_name, num_trials, aggregator):
     }
 
 
-def tune_all_methods(time_lim, metric_name, num_trials, aggregator):
+def tune_all_methods(time_lim, metric_name, num_trials, aggregator, plot_lines=False):
     tuned = {}
     for method_name in PLOTTING_ORDER:
         print(f"Tuning {method_name}...")
-        tuned[method_name] = tune_method(method_name, time_lim, metric_name, num_trials, aggregator)
+        tuned[method_name] = tune_method(
+            method_name,
+            time_lim,
+            metric_name,
+            num_trials,
+            aggregator,
+            plot_lines=plot_lines,
+        )
     return tuned
 
 
@@ -363,8 +425,11 @@ def plot_comparison(params_by_method, time_lim, metric_name, title_suffix="", tr
         title = f"{title}: {title_suffix}"
     plt.title(title)
     plt.tight_layout()
-    plt.show()
 
+    filename = f"muon_comparison_{metric_name}.pdf"
+    plt.savefig(filename, format='pdf', bbox_inches='tight')
+    print(f"Plot saved as {filename}")
+    # plt.show()
 
 def print_tuning_summary():
     print("Hyperparameters tuned by default:")
@@ -427,6 +492,11 @@ def parse_args():
         help="How to aggregate tuning scores across trials.",
     )
     parser.add_argument(
+        "--plot-tuning-lines",
+        action="store_true",
+        help="Save one PDF per method with all tuning curves from that method's hyperparameter grid.",
+    )
+    parser.add_argument(
         "--use-default-params",
         action="store_true",
         help="In compare mode, ignore the params file and use the hard-coded defaults in this script.",
@@ -446,7 +516,13 @@ def main():
     tuning_time_lim = args.time_lim if args.tuning_time_lim is None else args.tuning_time_lim
 
     if args.mode in ("tune", "tune_and_compare"):
-        tuned_results = tune_all_methods(tuning_time_lim, args.metric, args.num_trials, args.aggregator)
+        tuned_results = tune_all_methods(
+            tuning_time_lim,
+            args.metric,
+            args.num_trials,
+            args.aggregator,
+            plot_lines=args.plot_tuning_lines,
+        )
         save_tuned_params(
             tuned_results,
             args.params_file,
