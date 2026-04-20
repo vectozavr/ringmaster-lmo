@@ -13,10 +13,10 @@ import seaborn as sns
 import torch
 
 from asynchronous.algorithm import (
-    AsynchronousSGD,
-    RingmasterASGD,
+    DelayAdaptiveMuonASGD,
+    ParameterAgnosticRingmasterMuonASGD,
+    RennalaMuonSGD,
     RingmasterMuonASGD,
-    RennalaSGD,
     StochasticGradientNodeAlgorithm,
 )
 from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
@@ -34,19 +34,19 @@ matplotlib.rcParams["figure.figsize"] = (10, 7)
 matplotlib.rcParams["text.usetex"] = False
 
 
-colors = [
-    "#C00000",
-    "#B8860B",
-    "#006666",
-    "#2F5D50",
-]
+colors = {
+    "ringmaster_muon": "#C00000",
+    "pa_ringmaster_muon": "#B8860B",
+    "rennala_muon": "#006666",
+    "delay_adaptive_muon": "#4682B4",
+}
 
-markers = [
-    "*",
-    "^",
-    "H",
-    "o",
-]
+markers = {
+    "ringmaster_muon": "*",
+    "pa_ringmaster_muon": "^",
+    "rennala_muon": "H",
+    "delay_adaptive_muon": "o",
+}
 
 
 def run_optimizer(optimizer, function, point, time_lim, eval_interval):
@@ -108,47 +108,86 @@ def main():
 
     experiments = [
         (
-            "Ringmaster ASGD",
-            RingmasterASGD(
-                build_transport(function, num_nodes, seed=11),
-                point.copy(),
-                max_delay=4,
-                gamma=0.01,
-            ),
-            dict(color=colors[0], marker=markers[0], markersize=18, label="Ringmaster ASGD: gamma=0.01, R=4"),
-        ),
-        (
             "Ringmaster Muon",
             RingmasterMuonASGD(
-                build_transport(function, num_nodes, seed=13),
+                build_transport(function, num_nodes, seed=11),
                 point.copy(),
-                max_delay=4,
-                gamma=0.02,
-                beta=0.95,
-                ns_steps=5,
+                max_delay=int(os.environ.get("RINGMASTER_MUON_MAX_DELAY", "4")),
+                gamma=float(os.environ.get("RINGMASTER_MUON_GAMMA", "0.02")),
+                beta=float(os.environ.get("MUON_BETA", "0.95")),
+                ns_steps=int(os.environ.get("MUON_NS_STEPS", "5")),
+                nesterov=os.environ.get("MUON_NESTEROV", "1") != "0",
                 meta=muon_meta,
             ),
-            dict(color=colors[3], marker=markers[3], markersize=14, label="Ringmaster Muon: gamma=0.02, R=4"),
+            dict(
+                color=colors["ringmaster_muon"],
+                marker=markers["ringmaster_muon"],
+                markersize=18,
+                label=(
+                    f"Ringmaster Muon: "
+                    f"gamma={os.environ.get('RINGMASTER_MUON_GAMMA', '0.02')}, "
+                    f"R={os.environ.get('RINGMASTER_MUON_MAX_DELAY', '4')}"
+                ),
+            ),
         ),
         (
-            "Rennala SGD",
-            RennalaSGD(
+            "PA Ringmaster Muon",
+            ParameterAgnosticRingmasterMuonASGD(
+                build_transport(function, num_nodes, seed=13),
+                point.copy(),
+                eta=float(os.environ.get("PA_RINGMASTER_MUON_ETA", "0.5")),
+                ns_steps=int(os.environ.get("MUON_NS_STEPS", "5")),
+                nesterov=os.environ.get("MUON_NESTEROV", "1") != "0",
+                meta=muon_meta,
+            ),
+            dict(
+                color=colors["pa_ringmaster_muon"],
+                marker=markers["pa_ringmaster_muon"],
+                markersize=16,
+                label=f"PA Ringmaster Muon: eta={os.environ.get('PA_RINGMASTER_MUON_ETA', '0.5')}",
+            ),
+        ),
+        (
+            "Rennala Muon",
+            RennalaMuonSGD(
                 build_transport(function, num_nodes, seed=17),
                 point.copy(),
-                gamma=0.02,
-                batch_size=4,
+                gamma=float(os.environ.get("RENNALA_MUON_GAMMA", "0.02")),
+                batch_size=int(os.environ.get("RENNALA_MUON_BATCH_SIZE", "4")),
+                beta=float(os.environ.get("MUON_BETA", "0.95")),
+                ns_steps=int(os.environ.get("MUON_NS_STEPS", "5")),
+                nesterov=os.environ.get("MUON_NESTEROV", "1") != "0",
+                meta=muon_meta,
             ),
-            dict(color=colors[2], marker=markers[2], markersize=16, label="Rennala SGD: gamma=0.02, B=4"),
+            dict(
+                color=colors["rennala_muon"],
+                marker=markers["rennala_muon"],
+                markersize=16,
+                label=(
+                    f"Rennala Muon: "
+                    f"gamma={os.environ.get('RENNALA_MUON_GAMMA', '0.02')}, "
+                    f"B={os.environ.get('RENNALA_MUON_BATCH_SIZE', '4')}"
+                ),
+            ),
         ),
         (
-            "Delay-Adaptive ASGD",
-            AsynchronousSGD(
+            "Delay-Adaptive Muon",
+            DelayAdaptiveMuonASGD(
                 build_transport(function, num_nodes, seed=19),
                 point.copy(),
-                gamma=0.002,
+                gamma=float(os.environ.get("DELAY_ADAPTIVE_MUON_GAMMA", "0.002")),
                 delay_adaptive=True,
+                beta=float(os.environ.get("MUON_BETA", "0.95")),
+                ns_steps=int(os.environ.get("MUON_NS_STEPS", "5")),
+                nesterov=os.environ.get("MUON_NESTEROV", "1") != "0",
+                meta=muon_meta,
             ),
-            dict(color=colors[1], marker=markers[1], markersize=16, label="Delay-Adaptive ASGD: gamma=0.002"),
+            dict(
+                color=colors["delay_adaptive_muon"],
+                marker=markers["delay_adaptive_muon"],
+                markersize=14,
+                label=f"Delay-Adaptive Muon: gamma={os.environ.get('DELAY_ADAPTIVE_MUON_GAMMA', '0.002')}",
+            ),
         ),
     ]
 
@@ -173,7 +212,7 @@ def main():
     plt.xlim(0, time_lim)
     plt.xlabel("Runtime (seconds)")
     plt.ylabel("Validation Loss")
-    plt.title("Nanochat Async Training Comparison")
+    plt.title("Nanochat Muon Async Training Comparison")
 
     if os.environ.get("DISPLAY"):
         plt.show()

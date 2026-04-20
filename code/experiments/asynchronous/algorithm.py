@@ -117,6 +117,24 @@ def _structured_muon_update_numpy(gradient, momentum, parameter_infos, beta=0.95
         shift += size
     return update, next_momentum
 
+
+def _refresh_ringmaster_workers(transport, heap, time, point, delays, threshold, iteration):
+    if np.max(delays) < threshold:
+        return heap
+
+    indices = np.where(delays >= threshold)[0]
+    delays[indices] = 0
+    heap = [item for item in heap if item[1] not in indices]
+    heapq.heapify(heap)
+
+    for node_index in indices:
+        transport.ignore_node(time, node_index)
+        available_time = transport.call_available_node_method(
+            time, node_index, node_method="calculate_stochastic_gradient", point=point)
+        heapq.heappush(heap, (available_time, node_index, iteration))
+
+    return heap
+
 class FactoryAsyncMaster(Factory):
     pass
 
@@ -310,6 +328,90 @@ class RingmasterMuonASGD(object):
     def get_time(self):
         return self._time
 
+
+@FactoryAsyncMaster.register("ParameterAgnosticRingmasterMuon")
+class ParameterAgnosticRingmasterMuonASGD(object):
+    def __init__(self, transport, point, eta=None, ns_steps=5, nesterov=True, seed=None, meta=None):
+        self._transport = transport
+        self._transport.reset_all_nodes(0)
+        self._point = point
+        self._eta = eta
+        self._ns_steps = ns_steps
+        self._nesterov = nesterov
+        self._seed = seed
+        self._time = 0
+
+        self._alpha = 1.0
+        self._threshold = 1.0
+        self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._parameter_infos = _build_parameter_infos(meta, self._point.size)
+        self._heap = []
+        self._iter = 0
+        self._number_of_nodes = self._transport.get_number_of_nodes()
+        self._delays = np.array([0] * self._number_of_nodes)
+
+        for node_index in range(self._transport.get_number_of_nodes()):
+            available_time = self._transport.call_available_node_method(
+                self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+            heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+    def step(self):
+        available_time, node_index, iter = heapq.heappop(self._heap)
+        assert available_time != np.inf
+        self._time = available_time
+        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+
+        stepsize = self._eta / ((self._iter + 1) ** 0.75)
+        beta = 1.0 - self._alpha
+        if self._parameter_infos is None:
+            muon_update, self._momentum = _muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                beta=beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        else:
+            muon_update, self._momentum = _structured_muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                self._parameter_infos,
+                beta=beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        self._point = self._point - stepsize * muon_update
+
+        self._iter += 1
+        available_time = self._transport.call_available_node_method(
+            self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+        heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+        self._delays += 1
+        self._delays[node_index] = 0
+        self._heap = _refresh_ringmaster_workers(
+            self._transport,
+            self._heap,
+            self._time,
+            self._point,
+            self._delays,
+            self._threshold,
+            self._iter,
+        )
+
+        self._alpha = 1.0 / np.sqrt(self._iter)
+        self._threshold = max(1.0, np.floor(1.0 / self._alpha))
+
+    def calculate_function(self):
+        return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
+                                                         point=self._point))
+
+    def get_point(self):
+        return self._point
+
+    def get_time(self):
+        return self._time
+
 @FactoryAsyncMaster.register("Momentum_Normalized_Ringmaster")
 class Momentum_Normalized_RingmasterASGD(object):
     def __init__(self, transport, point, parameter_agnostic=False, threshold=None, gamma=None, alpha=None, seed=None):
@@ -437,6 +539,94 @@ class AsynchronousSGD(object):
     def get_point(self):
         return self._point
     
+    def get_time(self):
+        return self._time
+
+
+@FactoryAsyncMaster.register("AsynchronousMuon")
+class DelayAdaptiveMuonASGD(object):
+    def __init__(
+        self,
+        transport,
+        point,
+        gamma=None,
+        delay_adaptive=False,
+        gamma_multiply=None,
+        beta=0.95,
+        ns_steps=5,
+        nesterov=True,
+        seed=None,
+        meta=None,
+    ):
+        self._transport = transport
+        self._transport.reset_all_nodes(0)
+        self._point = point
+        if gamma_multiply is not None:
+            gamma *= gamma_multiply
+        self._gamma = gamma
+        self._delay_adaptive = delay_adaptive
+        self._beta = beta
+        self._ns_steps = ns_steps
+        self._nesterov = nesterov
+        self._seed = seed
+        self._time = 0
+
+        self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._parameter_infos = _build_parameter_infos(meta, self._point.size)
+        self._heap = []
+        self._iter = 0
+        self._number_of_nodes = self._transport.get_number_of_nodes()
+        self._delays = np.array([0] * self._number_of_nodes)
+
+        for node_index in range(self._transport.get_number_of_nodes()):
+            available_time = self._transport.call_available_node_method(
+                self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+            heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+    def step(self):
+        available_time, node_index, iter = heapq.heappop(self._heap)
+        assert available_time != np.inf
+        self._time = available_time
+        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+
+        if self._parameter_infos is None:
+            muon_update, self._momentum = _muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        else:
+            muon_update, self._momentum = _structured_muon_update_numpy(
+                stochastic_gradient,
+                self._momentum,
+                self._parameter_infos,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        if self._delay_adaptive:
+            lr = self._gamma * self._number_of_nodes / max(self._number_of_nodes, self._delays[node_index])
+        else:
+            lr = self._gamma
+        self._point = self._point - lr * muon_update
+
+        self._iter += 1
+        available_time = self._transport.call_available_node_method(
+            self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+        heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+        self._delays += 1
+        self._delays[node_index] = 0
+
+    def calculate_function(self):
+        return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
+                                                         point=self._point))
+
+    def get_point(self):
+        return self._point
+
     def get_time(self):
         return self._time
 
@@ -995,6 +1185,110 @@ class RennalaWithFixedBatchSizes(object):
     def get_time(self):
         return self._time
     
+    def get_total_worker_time(self):
+        return self._total_worker_time
+
+
+@FactoryAsyncMaster.register("rennala_muon")
+class RennalaMuonSGD(object):
+    def __init__(
+        self,
+        transport,
+        point,
+        gamma=None,
+        gamma_multiply=None,
+        batch_size=None,
+        beta=0.95,
+        ns_steps=5,
+        nesterov=True,
+        seed=None,
+        meta=None,
+    ):
+        self._transport = transport
+        self._point = point
+        if gamma_multiply is not None:
+            gamma *= gamma_multiply
+        self._gamma = gamma
+        self._batch_size = batch_size
+        self._beta = beta
+        self._ns_steps = ns_steps
+        self._nesterov = nesterov
+        self._seed = seed
+        self._time = 0
+
+        self._momentum = np.zeros_like(self._point, dtype=np.float64)
+        self._parameter_infos = _build_parameter_infos(meta, self._point.size)
+        self._heap = []
+        self._iter = 0
+        self._number_of_nodes = self._transport.get_number_of_nodes()
+
+        self._gradient_estimator = 0
+        self._current_batch = 0
+        self._total_worker_time = 0
+
+    def find_all_available_times(self):
+        self._transport.reset_all_nodes(0)
+        self._heap = [(self._transport.call_available_node_method(self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point),
+                        node_index, self._iter)
+                            for node_index in range(self._number_of_nodes)]
+        if self._batch_size < self._number_of_nodes:
+            self._heap = heapq.nsmallest(self._batch_size, self._heap)
+        heapq.heapify(self._heap)
+
+    def step(self):
+        self.find_all_available_times()
+
+        start_time = self._time
+        while self._current_batch < self._batch_size:
+            available_time, node_index, _ = heapq.heappop(self._heap)
+            self._time = available_time
+            stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+
+            if available_time == np.inf:
+                return
+
+            self._gradient_estimator = self._gradient_estimator + stochastic_gradient
+            self._current_batch += 1
+
+            available_time = self._transport.call_available_node_method(
+                self._time, node_index, node_method="calculate_stochastic_gradient", point=self._point)
+            heapq.heappush(self._heap, (available_time, node_index, self._iter))
+
+        self._total_worker_time += (self._time - start_time) * self._number_of_nodes
+
+        average_gradient = self._gradient_estimator / self._current_batch
+        if self._parameter_infos is None:
+            muon_update, self._momentum = _muon_update_numpy(
+                average_gradient,
+                self._momentum,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        else:
+            muon_update, self._momentum = _structured_muon_update_numpy(
+                average_gradient,
+                self._momentum,
+                self._parameter_infos,
+                beta=self._beta,
+                ns_steps=self._ns_steps,
+                nesterov=self._nesterov,
+            )
+        self._point = self._point - self._gamma * muon_update
+        self._iter += 1
+        self._current_batch = 0
+        self._gradient_estimator = 0
+
+    def calculate_function(self):
+        return np.mean(self._transport.call_nodes_method(node_method='calculate_function',
+                                                         point=self._point))
+
+    def get_point(self):
+        return self._point
+
+    def get_time(self):
+        return self._time
+
     def get_total_worker_time(self):
         return self._total_worker_time
 
