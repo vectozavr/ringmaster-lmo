@@ -252,8 +252,8 @@ def evaluate_bpb(model, tokenizer, batch_size, eval_tokens, device):
     total_bytes = 0
     for _ in range(steps):
         x, y, _ = next(val_loader)
-        loss_flat = model(x, y, reduction="none").view(-1)
-        y_flat = y.view(-1)
+        loss_flat = model(x, y, reduction="none").reshape(-1)
+        y_flat = y.reshape(-1)
         nbytes = token_bytes[y_flat]
         mask = nbytes > 0
         total_nats += (loss_flat * mask).sum().item()
@@ -504,8 +504,8 @@ class NanochatGPT(nn.Module):
         logits = softcap * torch.tanh(logits / softcap)
         if targets is not None:
             return F.cross_entropy(
-                logits.view(-1, logits.size(-1)),
-                targets.view(-1),
+                logits.reshape(-1, logits.size(-1)),
+                targets.reshape(-1),
                 ignore_index=-1,
                 reduction=reduction,
             )
