@@ -43,6 +43,9 @@ DEFAULT_NUM_NODES = 8
 DEFAULT_TIME_LIMIT = 300.0
 DEFAULT_DEVICE_BATCH_SIZE = 2
 DEFAULT_NUM_SHARDS = 10
+DEFAULT_GRADIENT_TIMING_PATH = os.path.join(os.path.dirname(__file__), "nanochat_gradient_timing.json")
+DEFAULT_DELAY_HETEROGENEITY = "sqrt"
+DEFAULT_DELAY_NOISE_SCALE = 0.05
 
 FUNCTION_SEED = 7
 TRANSPORT_SEED = 11
@@ -131,12 +134,36 @@ def build_function(function_seed):
     )
 
 
+def load_measured_gradient_time():
+    if not os.path.exists(DEFAULT_GRADIENT_TIMING_PATH):
+        return None
+    with open(DEFAULT_GRADIENT_TIMING_PATH, "r", encoding="utf-8") as source:
+        payload = json.load(source)
+    if "mean_seconds" not in payload:
+        raise ValueError(f"Timing file {DEFAULT_GRADIENT_TIMING_PATH} does not contain mean_seconds.")
+    return float(payload["mean_seconds"])
+
+
+def build_worker_delay_multipliers(num_nodes):
+    indices = np.arange(1, num_nodes + 1, dtype=np.float64)
+    if DEFAULT_DELAY_HETEROGENEITY == "sqrt":
+        return np.sqrt(indices)
+    if DEFAULT_DELAY_HETEROGENEITY == "linear":
+        return indices
+    if DEFAULT_DELAY_HETEROGENEITY == "uniform":
+        return np.ones(num_nodes, dtype=np.float64)
+    raise ValueError(f"Unknown delay heterogeneity model {DEFAULT_DELAY_HETEROGENEITY}")
+
+
 def build_transport(function, num_nodes, seed):
-    delays = np.array([1.0 + np.sqrt(i + 1) for i in range(num_nodes)], dtype=np.float64)
+    measured_gradient_time = load_measured_gradient_time()
+    base_delay = 1.0 if measured_gradient_time is None else measured_gradient_time
+    delays = base_delay * build_worker_delay_multipliers(num_nodes)
     generator = np.random.default_rng(seed=seed)
 
     def halfnormal(index):
-        return np.abs(generator.normal(loc=0.0, scale=np.sqrt(index + 1) * 0.05))
+        worker_delay = delays[index]
+        return np.abs(generator.normal(loc=0.0, scale=worker_delay * DEFAULT_DELAY_NOISE_SCALE))
 
     nodes = [Signature(StochasticGradientNodeAlgorithm, function) for _ in range(num_nodes)]
     return RandomDelayedAsynchronousTransport(nodes, delays, halfnormal)
@@ -514,6 +541,18 @@ def parse_args():
 def main():
     args = parse_args()
     print_tuning_summary()
+    measured_gradient_time = load_measured_gradient_time()
+    if measured_gradient_time is None:
+        print(
+            "No measured gradient timing file found. "
+            "Falling back to base delay = 1.0 seconds before worker heterogeneity/noise."
+        )
+    else:
+        print(
+            f"Using measured base gradient time {measured_gradient_time:.6f}s "
+            f"from {DEFAULT_GRADIENT_TIMING_PATH} with "
+            f"{DEFAULT_DELAY_HETEROGENEITY} worker scaling and noise scale {DEFAULT_DELAY_NOISE_SCALE}."
+        )
     sample_function = build_function(FUNCTION_SEED)
     print(f"Nanochat config: {sample_function.parameter_metadata()['model_config']}")
     del sample_function
