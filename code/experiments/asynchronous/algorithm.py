@@ -27,6 +27,12 @@ def _point_numel(point):
     return point.size
 
 
+def _unpack_stochastic_result(result):
+    if isinstance(result, dict) and "gradient" in result:
+        return result["gradient"], result.get("loss")
+    return result, None
+
+
 def _zeropower_via_newtonschulz5_numpy(gradient_matrix, steps):
     """Approximate Muon's orthogonalization step with the Newton-Schulz iteration."""
     assert gradient_matrix.ndim == 2
@@ -242,7 +248,12 @@ class StochasticGradientNodeAlgorithm(object):
         self._function = function
     
     def calculate_stochastic_gradient(self, point):
-        return self._function.stochastic_gradient(point)
+        gradient = self._function.stochastic_gradient(point)
+        if hasattr(self._function, "get_latest_loss"):
+            latest_loss = self._function.get_latest_loss()
+            if latest_loss is not None:
+                return {"gradient": gradient, "loss": float(latest_loss)}
+        return gradient
     
     def calculate_function(self, point):
         return self._function.value(point)
@@ -367,6 +378,7 @@ class RingmasterMuonASGD(object):
         self._iter = 0
         self._number_of_nodes = self._transport.get_number_of_nodes()
         self._delays = np.array([0] * self._number_of_nodes)
+        self._latest_loss = None
 
         for node_index in range(self._transport.get_number_of_nodes()):
             available_time = self._transport.call_available_node_method(
@@ -377,7 +389,10 @@ class RingmasterMuonASGD(object):
         available_time, node_index, iter = heapq.heappop(self._heap)
         assert available_time != np.inf
         self._time = available_time
-        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+        stochastic_result = self._transport.call_ready_node(self._time, node_index)
+        stochastic_gradient, latest_loss = _unpack_stochastic_result(stochastic_result)
+        if latest_loss is not None:
+            self._latest_loss = float(latest_loss)
 
         if self._parameter_infos is None:
             if _is_torch_tensor(stochastic_gradient):
@@ -445,6 +460,9 @@ class RingmasterMuonASGD(object):
     def get_time(self):
         return self._time
 
+    def get_latest_loss(self):
+        return self._latest_loss
+
 
 @FactoryAsyncMaster.register("ParameterAgnosticRingmasterMuon")
 class ParameterAgnosticRingmasterMuonASGD(object):
@@ -469,6 +487,7 @@ class ParameterAgnosticRingmasterMuonASGD(object):
         self._iter = 0
         self._number_of_nodes = self._transport.get_number_of_nodes()
         self._delays = np.array([0] * self._number_of_nodes)
+        self._latest_loss = None
 
         for node_index in range(self._transport.get_number_of_nodes()):
             available_time = self._transport.call_available_node_method(
@@ -479,7 +498,10 @@ class ParameterAgnosticRingmasterMuonASGD(object):
         available_time, node_index, iter = heapq.heappop(self._heap)
         assert available_time != np.inf
         self._time = available_time
-        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+        stochastic_result = self._transport.call_ready_node(self._time, node_index)
+        stochastic_gradient, latest_loss = _unpack_stochastic_result(stochastic_result)
+        if latest_loss is not None:
+            self._latest_loss = float(latest_loss)
 
         stepsize = self._eta / ((self._iter + 1) ** 0.75)
         beta = 1.0 - self._alpha
@@ -550,6 +572,9 @@ class ParameterAgnosticRingmasterMuonASGD(object):
 
     def get_time(self):
         return self._time
+
+    def get_latest_loss(self):
+        return self._latest_loss
 
 @FactoryAsyncMaster.register("Momentum_Normalized_Ringmaster")
 class Momentum_Normalized_RingmasterASGD(object):
@@ -719,6 +744,7 @@ class DelayAdaptiveMuonASGD(object):
         self._iter = 0
         self._number_of_nodes = self._transport.get_number_of_nodes()
         self._delays = np.array([0] * self._number_of_nodes)
+        self._latest_loss = None
 
         for node_index in range(self._transport.get_number_of_nodes()):
             available_time = self._transport.call_available_node_method(
@@ -729,7 +755,10 @@ class DelayAdaptiveMuonASGD(object):
         available_time, node_index, iter = heapq.heappop(self._heap)
         assert available_time != np.inf
         self._time = available_time
-        stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+        stochastic_result = self._transport.call_ready_node(self._time, node_index)
+        stochastic_gradient, latest_loss = _unpack_stochastic_result(stochastic_result)
+        if latest_loss is not None:
+            self._latest_loss = float(latest_loss)
 
         if self._parameter_infos is None:
             if _is_torch_tensor(stochastic_gradient):
@@ -790,6 +819,9 @@ class DelayAdaptiveMuonASGD(object):
 
     def get_time(self):
         return self._time
+
+    def get_latest_loss(self):
+        return self._latest_loss
 
 @FactoryAsyncMaster.register("IAASGD")
 class IAASGD(object):
@@ -1389,6 +1421,7 @@ class RennalaMuonSGD(object):
         self._gradient_estimator = 0
         self._current_batch = 0
         self._total_worker_time = 0
+        self._latest_loss = None
 
     def find_all_available_times(self):
         self._transport.reset_all_nodes(0)
@@ -1406,7 +1439,10 @@ class RennalaMuonSGD(object):
         while self._current_batch < self._batch_size:
             available_time, node_index, _ = heapq.heappop(self._heap)
             self._time = available_time
-            stochastic_gradient = self._transport.call_ready_node(self._time, node_index)
+            stochastic_result = self._transport.call_ready_node(self._time, node_index)
+            stochastic_gradient, latest_loss = _unpack_stochastic_result(stochastic_result)
+            if latest_loss is not None:
+                self._latest_loss = float(latest_loss)
 
             if available_time == np.inf:
                 return
@@ -1474,6 +1510,9 @@ class RennalaMuonSGD(object):
 
     def get_total_worker_time(self):
         return self._total_worker_time
+
+    def get_latest_loss(self):
+        return self._latest_loss
 
 
 def probabilistic_round(x):

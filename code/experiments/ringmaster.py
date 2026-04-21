@@ -204,16 +204,19 @@ def build_optimizer(method_name, params, point, transport, muon_meta):
 
 
 def run_optimizer(optimizer, function, point, time_lim, eval_interval):
-    runtime = [0.0]
-    latest_train_loss = [function.value(point)]
+    runtime = []
+    latest_train_loss = []
     next_eval_time = eval_interval
 
-    while runtime[-1] < time_lim:
+    while not runtime or runtime[-1] < time_lim:
         optimizer.step()
         current_time = optimizer.get_time()
         if current_time >= next_eval_time or current_time >= time_lim:
+            latest_loss = optimizer.get_latest_loss()
+            if latest_loss is None:
+                continue
             runtime.append(min(current_time, time_lim))
-            latest_train_loss.append(function.value(optimizer.get_point()))
+            latest_train_loss.append(float(latest_loss))
             next_eval_time += eval_interval
 
     return {

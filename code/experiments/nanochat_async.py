@@ -602,6 +602,9 @@ class NanochatLanguageModelFunction:
     def stochastic_gradient(self, point):
         return self.gradient(point)
 
+    def get_latest_loss(self):
+        return self._latest_loss
+
     def dim(self):
         return int(sum(parameter.numel() for parameter in self._parameters_iter()))
 
