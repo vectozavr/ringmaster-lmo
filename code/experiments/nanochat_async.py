@@ -16,6 +16,7 @@ import torch.nn.functional as F
 MAX_SEQ_LEN = 2048
 TIME_BUDGET = 300
 DEFAULT_EVAL_TOKENS = 40 * 524288
+DEFAULT_NUM_SHARDS = 10
 
 CACHE_DIR = os.environ.get("AUTORESEARCH_CACHE_DIR", os.path.join(os.path.expanduser("~"), ".cache", "autoresearch"))
 DATA_DIR = os.path.join(CACHE_DIR, "data")
@@ -536,9 +537,7 @@ class NanochatLanguageModelFunction:
         self.seed = seed
         self.device_batch_size = device_batch_size
         self.eval_batch_size = eval_batch_size
-        self.eval_tokens = eval_tokens if eval_tokens is not None else int(
-            os.environ.get("AUTORESEARCH_EVAL_TOKENS", str(2 * MAX_SEQ_LEN * eval_batch_size))
-        )
+        self.eval_tokens = eval_tokens if eval_tokens is not None else DEFAULT_EVAL_TOKENS
         self.autocast_ctx = (
             torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)
             if self.device.type == "cuda"
@@ -550,7 +549,7 @@ class NanochatLanguageModelFunction:
             torch.cuda.manual_seed(seed)
             torch.set_float32_matmul_precision("high")
 
-        prepare_shards = num_shards if num_shards is not None else int(os.environ.get("AUTORESEARCH_NUM_SHARDS", "10"))
+        prepare_shards = num_shards if num_shards is not None else DEFAULT_NUM_SHARDS
         ensure_autoresearch_assets(prepare_shards)
 
         self.tokenizer = Tokenizer.from_directory()

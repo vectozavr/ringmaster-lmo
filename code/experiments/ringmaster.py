@@ -38,33 +38,37 @@ matplotlib.rcParams["figure.figsize"] = (10, 7)
 matplotlib.rcParams["text.usetex"] = False
 
 
-DEFAULT_NUM_NODES = int(os.environ.get("RINGMASTER_NUM_NODES", "8"))
-DEFAULT_TIME_LIMIT = float(os.environ.get("RINGMASTER_TIME_LIM", "300"))
-DEFAULT_EVAL_INTERVAL = float(os.environ.get("RINGMASTER_EVAL_INTERVAL", "5"))
+# Experiment defaults. Edit these directly for the standard Nanochat run.
+DEFAULT_NUM_NODES = 8
+DEFAULT_TIME_LIMIT = 300.0
+DEFAULT_EVAL_INTERVAL = 5.0
+DEFAULT_DEVICE_BATCH_SIZE = 2
+DEFAULT_EVAL_BATCH_SIZE = 4
+DEFAULT_NUM_SHARDS = 10
 
 FUNCTION_SEED = 7
 TRANSPORT_SEED = 11
 
 COMMON_MUON_PARAMS = {
-    "beta": float(os.environ.get("MUON_BETA", "0.95")),
-    "ns_steps": int(os.environ.get("MUON_NS_STEPS", "5")),
-    "nesterov": os.environ.get("MUON_NESTEROV", "1") != "0",
+    "beta": 0.95,
+    "ns_steps": 5,
+    "nesterov": True,
 }
 
 DEFAULT_PARAMS = {
     "RingmasterMuonASGD": {
-        "gamma": float(os.environ.get("RINGMASTER_MUON_GAMMA", "0.004")),
-        "max_delay": int(os.environ.get("RINGMASTER_MUON_MAX_DELAY", "4")),
+        "gamma": 0.004,
+        "max_delay": 4,
     },
     "ParameterAgnosticRingmasterMuonASGD": {
-        "eta": float(os.environ.get("PA_RINGMASTER_MUON_ETA", "0.05")),
+        "eta": 0.05,
     },
     "RennalaMuonSGD": {
-        "gamma": float(os.environ.get("RENNALA_MUON_GAMMA", "0.004")),
-        "batch_size": int(os.environ.get("RENNALA_MUON_BATCH_SIZE", "4")),
+        "gamma": 0.004,
+        "batch_size": 4,
     },
     "DelayAdaptiveMuonASGD": {
-        "gamma": float(os.environ.get("DELAY_ADAPTIVE_MUON_GAMMA", "0.0002")),
+        "gamma": 0.0002,
     },
 }
 
@@ -123,9 +127,9 @@ def clone_point(point):
 def build_function(function_seed):
     return NanochatLanguageModelFunction(
         seed=function_seed,
-        device_batch_size=int(os.environ.get("RINGMASTER_DEVICE_BATCH_SIZE", "2")),
-        eval_batch_size=int(os.environ.get("RINGMASTER_EVAL_BATCH_SIZE", "4")),
-        num_shards=int(os.environ.get("AUTORESEARCH_NUM_SHARDS", "10")),
+        device_batch_size=DEFAULT_DEVICE_BATCH_SIZE,
+        eval_batch_size=DEFAULT_EVAL_BATCH_SIZE,
+        num_shards=DEFAULT_NUM_SHARDS,
         is_cuda=torch.cuda.is_available(),
     )
 
@@ -356,9 +360,9 @@ def save_tuned_params(tuned_results, output_path, time_lim, num_trials, aggregat
             "aggregator": aggregator,
             "common_muon_params": COMMON_MUON_PARAMS,
             "num_nodes": DEFAULT_NUM_NODES,
-            "device_batch_size": int(os.environ.get("RINGMASTER_DEVICE_BATCH_SIZE", "2")),
-            "eval_batch_size": int(os.environ.get("RINGMASTER_EVAL_BATCH_SIZE", "2")),
-            "num_shards": int(os.environ.get("AUTORESEARCH_NUM_SHARDS", "10")),
+            "device_batch_size": DEFAULT_DEVICE_BATCH_SIZE,
+            "eval_batch_size": DEFAULT_EVAL_BATCH_SIZE,
+            "num_shards": DEFAULT_NUM_SHARDS,
         }
     }
     payload.update(tuned_results)
