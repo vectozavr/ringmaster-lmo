@@ -538,6 +538,7 @@ class NanochatLanguageModelFunction:
         self.device_batch_size = device_batch_size
         self.eval_batch_size = eval_batch_size
         self.eval_tokens = eval_tokens if eval_tokens is not None else DEFAULT_EVAL_TOKENS
+        self._latest_loss = None
         self.autocast_ctx = (
             torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)
             if self.device.type == "cuda"
@@ -583,15 +584,9 @@ class NanochatLanguageModelFunction:
 
     def value(self, point):
         self._set_point(point)
-        self._model.eval()
-        with self.autocast_ctx:
-            return float(evaluate_bpb(
-                self._model,
-                self.tokenizer,
-                batch_size=self.eval_batch_size,
-                eval_tokens=self.eval_tokens,
-                device=self.device,
-            ))
+        if self._latest_loss is None:
+            raise RuntimeError("Latest minibatch loss is not available yet.")
+        return float(self._latest_loss)
 
     def gradient(self, point):
         self._set_point(point)
@@ -600,6 +595,7 @@ class NanochatLanguageModelFunction:
         self._model.zero_grad(set_to_none=True)
         with self.autocast_ctx:
             loss = self._model(x, y)
+        self._latest_loss = float(loss.detach().float().item())
         loss.backward()
         return self._parameters_to_flat_tensor(grad=True)
 

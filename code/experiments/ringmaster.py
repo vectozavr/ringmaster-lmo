@@ -205,7 +205,7 @@ def build_optimizer(method_name, params, point, transport, muon_meta):
 
 def run_optimizer(optimizer, function, point, time_lim, eval_interval):
     runtime = [0.0]
-    validation_bpb = [function.value(point)]
+    latest_train_loss = [function.value(point)]
     next_eval_time = eval_interval
 
     while runtime[-1] < time_lim:
@@ -213,12 +213,12 @@ def run_optimizer(optimizer, function, point, time_lim, eval_interval):
         current_time = optimizer.get_time()
         if current_time >= next_eval_time or current_time >= time_lim:
             runtime.append(min(current_time, time_lim))
-            validation_bpb.append(function.value(optimizer.get_point()))
+            latest_train_loss.append(function.value(optimizer.get_point()))
             next_eval_time += eval_interval
 
     return {
         "runtime": runtime,
-        "validation_bpb": validation_bpb,
+        "latest_train_loss": latest_train_loss,
     }
 
 
@@ -237,7 +237,7 @@ def evaluate_method(method_name, params, time_lim, eval_interval, function_seed,
 
 
 def score_trace(trace):
-    return float(trace["validation_bpb"][-1])
+    return float(trace["latest_train_loss"][-1])
 
 
 def candidate_param_sets(method_name):
@@ -273,7 +273,7 @@ def plot_tuning_lines_for_method(method_name, time_lim, traces_by_params):
     for params, trace in traces_by_params:
         plt.semilogy(
             trace["runtime"],
-            trace["validation_bpb"],
+            trace["latest_train_loss"],
             label=format_params_for_tuning_label(params),
             linestyle="solid",
             alpha=0.85,
@@ -282,7 +282,7 @@ def plot_tuning_lines_for_method(method_name, time_lim, traces_by_params):
     plt.legend(loc="best", prop={"size": 10})
     plt.xlim(0, time_lim)
     plt.xlabel("Runtime (seconds)")
-    plt.ylabel("Validation BPB")
+    plt.ylabel("Latest Minibatch Loss")
     plt.title(f"Tuning {format_method_name(method_name)} method")
     plt.tight_layout()
     output_path = tuning_plot_path(method_name)
@@ -329,7 +329,7 @@ def tune_method(method_name, time_lim, num_trials, aggregator, eval_interval, pl
     return {
         "params": best_params,
         "score": float(best_score),
-        "metric": "validation_bpb",
+        "metric": "latest_train_loss",
         "num_trials": num_trials,
         "aggregator": aggregator,
         "trial_scores": best_trial_scores,
@@ -355,7 +355,7 @@ def save_tuned_params(tuned_results, output_path, time_lim, num_trials, aggregat
     payload = {
         "_meta": {
             "time_limit": time_lim,
-            "metric": "validation_bpb",
+            "metric": "latest_train_loss",
             "num_trials": num_trials,
             "aggregator": aggregator,
             "common_muon_params": COMMON_MUON_PARAMS,
@@ -412,7 +412,7 @@ def plot_comparison(params_by_method, time_lim, eval_interval, title_suffix="", 
         print(f"Comparing {method_name} with params={params_by_method[method_name]}")
         plt.semilogy(
             trace["runtime"],
-            trace["validation_bpb"],
+            trace["latest_train_loss"],
             label=format_method_label(method_name, params_by_method[method_name]),
             linestyle="solid",
             marker=MARKERS[method_name],
@@ -424,7 +424,7 @@ def plot_comparison(params_by_method, time_lim, eval_interval, title_suffix="", 
     plt.legend(loc="upper right", prop={"size": 14})
     plt.xlim(0, time_lim)
     plt.xlabel("Runtime (seconds)")
-    plt.ylabel("Validation BPB")
+    plt.ylabel("Latest Minibatch Loss")
     title = f"Nanochat Muon Async Training Comparison (depth={DEPTH})"
     if title_suffix:
         title = f"{title}: {title_suffix}"
