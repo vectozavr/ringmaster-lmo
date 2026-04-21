@@ -452,14 +452,19 @@ def parse_args():
         description=(
             "Tune and compare Muon-based asynchronous Nanochat methods. "
             "Use --mode tune_and_compare to search hyperparameters first and then plot the methods, "
-            "or --mode compare to plot with a given params file."
+            "or use compare/compare_defaults to plot without tuning in the current run."
         )
     )
     parser.add_argument(
         "--mode",
-        choices=["tune", "compare", "tune_and_compare"],
+        choices=["tune", "compare", "compare_defaults", "tune_and_compare"],
         default="compare",
-        help="`tune` searches hyperparameters, `compare` plots using a parameter set, `tune_and_compare` does both.",
+        help=(
+            "`tune` searches hyperparameters, "
+            "`compare` plots using a parameter set, "
+            "`compare_defaults` plots using the hard-coded defaults, "
+            "`tune_and_compare` does both."
+        ),
     )
     parser.add_argument(
         "--params-file",
@@ -555,7 +560,7 @@ def main():
         )
         return
 
-    if args.use_default_params:
+    if args.mode == "compare_defaults" or args.use_default_params:
         params_by_method = DEFAULT_PARAMS
         title_suffix = "defaults"
     else:
