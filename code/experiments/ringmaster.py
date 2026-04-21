@@ -555,6 +555,8 @@ def main():
         )
     sample_function = build_function(FUNCTION_SEED)
     print(f"Nanochat config: {sample_function.parameter_metadata()['model_config']}")
+    num_parameters = sample_function.dim()
+    print(f"Model size: {num_parameters:,} parameters ({num_parameters / 1e6:.2f}M)")
     del sample_function
     gc.collect()
     if torch.cuda.is_available():

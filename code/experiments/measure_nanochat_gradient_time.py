@@ -81,8 +81,10 @@ def main():
         compile_model=args.compile_model,
     )
     point = function.get_current_point()
+    num_parameters = function.dim()
 
     print("Nanochat config:", function.parameter_metadata()["model_config"])
+    print(f"Model size: {num_parameters:,} parameters ({num_parameters / 1e6:.2f}M)")
     print(f"Device: {function.device}")
     print(f"Warmup steps: {args.warmup_steps}")
     print(f"Measure steps: {args.measure_steps}")
@@ -119,6 +121,7 @@ def main():
         "num_shards": args.num_shards,
         "seed": args.seed,
         "compile_model": bool(args.compile_model),
+        "num_parameters": int(num_parameters),
         "model_config": function.parameter_metadata()["model_config"],
     }
 
