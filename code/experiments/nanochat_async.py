@@ -520,7 +520,6 @@ class NanochatLanguageModelFunction:
         is_cuda=True,
         num_shards=None,
         device_batch_size=2,
-        eval_batch_size=2,
         eval_tokens=None,
         n_layer=DEPTH,
         n_head=N_HEAD,
@@ -536,7 +535,6 @@ class NanochatLanguageModelFunction:
 
         self.seed = seed
         self.device_batch_size = device_batch_size
-        self.eval_batch_size = eval_batch_size
         self.eval_tokens = eval_tokens if eval_tokens is not None else DEFAULT_EVAL_TOKENS
         self._latest_loss = None
         self.autocast_ctx = (

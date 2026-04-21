@@ -41,9 +41,7 @@ matplotlib.rcParams["text.usetex"] = False
 # Experiment defaults. Edit these directly for the standard Nanochat run.
 DEFAULT_NUM_NODES = 8
 DEFAULT_TIME_LIMIT = 300.0
-DEFAULT_EVAL_INTERVAL = 5.0
 DEFAULT_DEVICE_BATCH_SIZE = 2
-DEFAULT_EVAL_BATCH_SIZE = 4
 DEFAULT_NUM_SHARDS = 10
 
 FUNCTION_SEED = 7
@@ -128,7 +126,6 @@ def build_function(function_seed):
     return NanochatLanguageModelFunction(
         seed=function_seed,
         device_batch_size=DEFAULT_DEVICE_BATCH_SIZE,
-        eval_batch_size=DEFAULT_EVAL_BATCH_SIZE,
         num_shards=DEFAULT_NUM_SHARDS,
         is_cuda=torch.cuda.is_available(),
     )
@@ -203,21 +200,18 @@ def build_optimizer(method_name, params, point, transport, muon_meta):
     raise ValueError(f"Unknown method {method_name}")
 
 
-def run_optimizer(optimizer, function, point, time_lim, eval_interval):
+def run_optimizer(optimizer, function, point, time_lim):
     runtime = []
     latest_train_loss = []
-    next_eval_time = eval_interval
 
     while not runtime or runtime[-1] < time_lim:
         optimizer.step()
         current_time = optimizer.get_time()
-        if current_time >= next_eval_time or current_time >= time_lim:
-            latest_loss = optimizer.get_latest_loss()
-            if latest_loss is None:
-                continue
-            runtime.append(min(current_time, time_lim))
-            latest_train_loss.append(float(latest_loss))
-            next_eval_time += eval_interval
+        latest_loss = optimizer.get_latest_loss()
+        if latest_loss is None:
+            continue
+        runtime.append(min(current_time, time_lim))
+        latest_train_loss.append(float(latest_loss))
 
     return {
         "runtime": runtime,
@@ -225,13 +219,13 @@ def run_optimizer(optimizer, function, point, time_lim, eval_interval):
     }
 
 
-def evaluate_method(method_name, params, time_lim, eval_interval, function_seed, transport_seed):
+def evaluate_method(method_name, params, time_lim, function_seed, transport_seed):
     function = build_function(function_seed)
     point = function.get_current_point()
     muon_meta = function.parameter_metadata()
     transport = build_transport(function, DEFAULT_NUM_NODES, transport_seed)
     optimizer = build_optimizer(method_name, params, point, transport, muon_meta)
-    trace = run_optimizer(optimizer, function, point, time_lim, eval_interval)
+    trace = run_optimizer(optimizer, function, point, time_lim)
     del optimizer, transport, function
     gc.collect()
     if torch.cuda.is_available():
@@ -294,7 +288,7 @@ def plot_tuning_lines_for_method(method_name, time_lim, traces_by_params):
     print(f"Saved tuning plot to {output_path}")
 
 
-def tune_method(method_name, time_lim, num_trials, aggregator, eval_interval, plot_lines=False):
+def tune_method(method_name, time_lim, num_trials, aggregator, plot_lines=False):
     best_score = np.inf
     best_params = None
     best_trial_scores = None
@@ -307,7 +301,6 @@ def tune_method(method_name, time_lim, num_trials, aggregator, eval_interval, pl
                 method_name,
                 params,
                 time_lim,
-                eval_interval,
                 function_seed=FUNCTION_SEED + trial_index,
                 transport_seed=TRANSPORT_SEED + trial_index,
             )
@@ -339,7 +332,7 @@ def tune_method(method_name, time_lim, num_trials, aggregator, eval_interval, pl
     }
 
 
-def tune_all_methods(time_lim, num_trials, aggregator, eval_interval, plot_lines=False):
+def tune_all_methods(time_lim, num_trials, aggregator, plot_lines=False):
     tuned = {}
     for method_name in PLOTTING_ORDER:
         print(f"Tuning {method_name}...")
@@ -348,7 +341,6 @@ def tune_all_methods(time_lim, num_trials, aggregator, eval_interval, plot_lines
             time_lim,
             num_trials,
             aggregator,
-            eval_interval,
             plot_lines=plot_lines,
         )
     return tuned
@@ -364,7 +356,6 @@ def save_tuned_params(tuned_results, output_path, time_lim, num_trials, aggregat
             "common_muon_params": COMMON_MUON_PARAMS,
             "num_nodes": DEFAULT_NUM_NODES,
             "device_batch_size": DEFAULT_DEVICE_BATCH_SIZE,
-            "eval_batch_size": DEFAULT_EVAL_BATCH_SIZE,
             "num_shards": DEFAULT_NUM_SHARDS,
         }
     }
@@ -400,7 +391,7 @@ def format_method_label(method_name, params):
     raise ValueError(f"Unknown method {method_name}")
 
 
-def plot_comparison(params_by_method, time_lim, eval_interval, title_suffix="", trial_index=0):
+def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0):
     plt.figure()
 
     for method_name in PLOTTING_ORDER:
@@ -408,7 +399,6 @@ def plot_comparison(params_by_method, time_lim, eval_interval, title_suffix="", 
             method_name,
             params_by_method[method_name],
             time_lim,
-            eval_interval,
             function_seed=FUNCTION_SEED + trial_index,
             transport_seed=TRANSPORT_SEED + trial_index,
         )
@@ -491,12 +481,6 @@ def parse_args():
         help="Optional shorter runtime horizon used only during hyperparameter tuning. Defaults to --time-lim.",
     )
     parser.add_argument(
-        "--eval-interval",
-        type=float,
-        default=DEFAULT_EVAL_INTERVAL,
-        help="How often to evaluate validation BPB during tuning and comparison.",
-    )
-    parser.add_argument(
         "--num-trials",
         type=int,
         default=1,
@@ -544,7 +528,6 @@ def main():
             tuning_time_lim,
             args.num_trials,
             args.aggregator,
-            args.eval_interval,
             plot_lines=args.plot_tuning_lines,
         )
         save_tuned_params(
@@ -561,7 +544,6 @@ def main():
         plot_comparison(
             params_by_method,
             args.time_lim,
-            args.eval_interval,
             title_suffix="tuned",
             trial_index=args.compare_trial_index,
         )
@@ -577,7 +559,6 @@ def main():
     plot_comparison(
         params_by_method,
         args.time_lim,
-        args.eval_interval,
         title_suffix=title_suffix,
         trial_index=args.compare_trial_index,
     )
