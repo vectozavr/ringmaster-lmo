@@ -171,7 +171,7 @@ class Tokenizer:
 def get_token_bytes(device):
     path = os.path.join(TOKENIZER_DIR, "token_bytes.pt")
     with open(path, "rb") as source:
-        return torch.load(source, map_location=device)
+        return torch.load(source, map_location=device, weights_only=True)
 
 
 def _document_batches(split):
@@ -585,13 +585,14 @@ class NanochatLanguageModelFunction:
     def value(self, point):
         self._set_point(point)
         self._model.eval()
-        return float(evaluate_bpb(
-            self._model,
-            self.tokenizer,
-            batch_size=self.eval_batch_size,
-            eval_tokens=self.eval_tokens,
-            device=self.device,
-        ))
+        with self.autocast_ctx:
+            return float(evaluate_bpb(
+                self._model,
+                self.tokenizer,
+                batch_size=self.eval_batch_size,
+                eval_tokens=self.eval_tokens,
+                device=self.device,
+            ))
 
     def gradient(self, point):
         self._set_point(point)
