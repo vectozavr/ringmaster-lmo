@@ -46,6 +46,7 @@ DEFAULT_NUM_SHARDS = 10
 DEFAULT_GRADIENT_TIMING_PATH = os.path.join(os.path.dirname(__file__), "nanochat_gradient_timing.json")
 DEFAULT_DELAY_HETEROGENEITY = "sqrt"
 DEFAULT_DELAY_NOISE_SCALE = 0.05
+DEFAULT_TRACE_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "ringmaster_nanochat_traces.json")
 
 FUNCTION_SEED = 7
 TRANSPORT_SEED = 11
@@ -434,8 +435,33 @@ def format_method_label(method_name, params):
     raise ValueError(f"Unknown method {method_name}")
 
 
-def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0):
+def save_comparison_traces(traces_by_method, params_by_method, output_path, time_lim, title_suffix, trial_index):
+    payload = {
+        "_meta": {
+            "time_limit": time_lim,
+            "metric": "latest_train_loss",
+            "title_suffix": title_suffix,
+            "trial_index": trial_index,
+            "num_nodes": DEFAULT_NUM_NODES,
+            "device_batch_size": DEFAULT_DEVICE_BATCH_SIZE,
+            "num_shards": DEFAULT_NUM_SHARDS,
+            "delay_heterogeneity": DEFAULT_DELAY_HETEROGENEITY,
+            "delay_noise_scale": DEFAULT_DELAY_NOISE_SCALE,
+            "gradient_timing_path": DEFAULT_GRADIENT_TIMING_PATH,
+            "measured_gradient_time": load_measured_gradient_time(),
+            "common_muon_params": COMMON_MUON_PARAMS,
+        },
+        "params_by_method": params_by_method,
+        "traces_by_method": traces_by_method,
+    }
+    with open(output_path, "w", encoding="utf-8") as output:
+        json.dump(payload, output, indent=2, sort_keys=True)
+    print(f"Saved comparison traces to {output_path}")
+
+
+def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0, trace_output_path=DEFAULT_TRACE_OUTPUT_PATH):
     plt.figure()
+    traces_by_method = {}
 
     for method_name in PLOTTING_ORDER:
         trace = evaluate_method(
@@ -445,6 +471,11 @@ def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0):
             function_seed=FUNCTION_SEED + trial_index,
             transport_seed=TRANSPORT_SEED + trial_index,
         )
+        traces_by_method[method_name] = {
+            "label": format_method_label(method_name, params_by_method[method_name]),
+            "runtime": [float(value) for value in trace["runtime"]],
+            "latest_train_loss": [float(value) for value in trace["latest_train_loss"]],
+        }
         print(f"Comparing {method_name} with params={params_by_method[method_name]}")
         plt.semilogy(
             trace["runtime"],
@@ -471,6 +502,7 @@ def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0):
     plt.savefig(output_path, bbox_inches="tight")
     plt.close()
     print(f"Saved plot to {output_path}")
+    save_comparison_traces(traces_by_method, params_by_method, trace_output_path, time_lim, title_suffix, trial_index)
 
 
 def print_tuning_summary():
@@ -551,6 +583,11 @@ def parse_args():
         default=0,
         help="Which deterministic trial seed to use for the final comparison plot.",
     )
+    parser.add_argument(
+        "--trace-output",
+        default=DEFAULT_TRACE_OUTPUT_PATH,
+        help="JSON file where comparison traces are saved for later replotting or smoothing.",
+    )
     return parser.parse_args()
 
 
@@ -603,6 +640,7 @@ def main():
             args.time_lim,
             title_suffix="tuned",
             trial_index=args.compare_trial_index,
+            trace_output_path=args.trace_output,
         )
         return
 
@@ -618,6 +656,7 @@ def main():
         args.time_lim,
         title_suffix=title_suffix,
         trial_index=args.compare_trial_index,
+        trace_output_path=args.trace_output,
     )
 
 
