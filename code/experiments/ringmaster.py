@@ -3,7 +3,7 @@ import gc
 import itertools
 import json
 import os
-
+from tqdm import tqdm
 import matplotlib
 
 if os.environ.get("DISPLAY"):
@@ -40,8 +40,8 @@ matplotlib.rcParams["text.usetex"] = False
 
 # Experiment defaults. Edit these directly for the standard Nanochat run.
 DEFAULT_NUM_NODES = 8
-DEFAULT_TIME_LIMIT = 300.0
-DEFAULT_DEVICE_BATCH_SIZE = 2
+DEFAULT_TIME_LIMIT = 500.0
+DEFAULT_DEVICE_BATCH_SIZE = 4
 DEFAULT_NUM_SHARDS = 10
 DEFAULT_GRADIENT_TIMING_PATH = os.path.join(os.path.dirname(__file__), "nanochat_gradient_timing.json")
 DEFAULT_DELAY_HETEROGENEITY = "sqrt"
@@ -58,35 +58,35 @@ COMMON_MUON_PARAMS = {
 
 DEFAULT_PARAMS = {
     "RingmasterMuonASGD": {
-        "gamma": 0.004,
-        "max_delay": 4,
+        "gamma": 1,
+        "max_delay": 2,
     },
     "ParameterAgnosticRingmasterMuonASGD": {
-        "eta": 0.05,
+        "eta": 5,
     },
     "RennalaMuonSGD": {
-        "gamma": 0.004,
-        "batch_size": 4,
+        "gamma": 1,
+        "batch_size": 2,
     },
     "DelayAdaptiveMuonASGD": {
-        "gamma": 0.0002,
+        "gamma": 1,
     },
 }
 
 TUNING_GRIDS = {
     "RingmasterMuonASGD": {
-        "gamma": [5 ** i for i in range(-6, 1)],
+        "gamma": [5 ** i for i in range(-2, 2)],
         "max_delay": [1, 2, 4, 8, 16],
     },
     "ParameterAgnosticRingmasterMuonASGD": {
-        "eta": [5 ** i for i in range(-5, 2)],
+        "eta": [5 ** i for i in range(-2, 3)],
     },
     "RennalaMuonSGD": {
-        "gamma": [5 ** i for i in range(-6, 1)],
+        "gamma": [5 ** i for i in range(1, 2)],
         "batch_size": [1, 2, 4, 8, 16],
     },
     "DelayAdaptiveMuonASGD": {
-        "gamma": [5 ** i for i in range(-8, -1)],
+        "gamma": [5 ** i for i in range(-2, 2)],
     },
 }
 
@@ -131,6 +131,7 @@ def build_function(function_seed):
         device_batch_size=DEFAULT_DEVICE_BATCH_SIZE,
         num_shards=DEFAULT_NUM_SHARDS,
         is_cuda=torch.cuda.is_available(),
+        compile_model=True,
     )
 
 
@@ -231,14 +232,29 @@ def run_optimizer(optimizer, function, point, time_lim):
     runtime = []
     latest_train_loss = []
 
+    # Initialize the progress bar with the total time limit
+    pbar = tqdm(total=time_lim, desc="Training progress", unit="s")
+
     while not runtime or runtime[-1] < time_lim:
         optimizer.step()
         current_time = optimizer.get_time()
         latest_loss = optimizer.get_latest_loss()
+
         if latest_loss is None:
             continue
+
+        # Calculate how much to update the bar
+        # If runtime is empty, use current_time; otherwise, use the delta
+        prev_time = runtime[-1] if runtime else 0
+        pbar.update(min(current_time, time_lim) - prev_time)
+
         runtime.append(min(current_time, time_lim))
         latest_train_loss.append(float(latest_loss))
+
+        # Add stats to the right side of the bar
+        pbar.set_postfix({"loss": f"{latest_loss:.4f}", "time": f"{current_time:.2f}s"})
+
+    pbar.close()
 
     return {
         "runtime": runtime,
@@ -451,7 +467,7 @@ def plot_comparison(params_by_method, time_lim, title_suffix="", trial_index=0):
     plt.title(title)
     plt.tight_layout()
 
-    output_path = os.path.join(os.path.dirname(__file__), "ringmaster_nanochat.png")
+    output_path = os.path.join(os.path.dirname(__file__), "ringmaster_nanochat_500.pdf")
     plt.savefig(output_path, bbox_inches="tight")
     plt.close()
     print(f"Saved plot to {output_path}")
@@ -504,7 +520,7 @@ def parse_args():
     parser.add_argument(
         "--tuning-time-lim",
         type=float,
-        default=None,
+        default=DEFAULT_TIME_LIMIT,
         help="Optional shorter runtime horizon used only during hyperparameter tuning. Defaults to --time-lim.",
     )
     parser.add_argument(

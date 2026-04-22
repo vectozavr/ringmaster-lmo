@@ -11,8 +11,8 @@ from nanochat_async import NanochatLanguageModelFunction
 
 DEFAULT_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "nanochat_gradient_timing.json")
 DEFAULT_WARMUP_STEPS = 3
-DEFAULT_MEASURE_STEPS = 10
-DEFAULT_DEVICE_BATCH_SIZE = 2
+DEFAULT_MEASURE_STEPS = 100
+DEFAULT_DEVICE_BATCH_SIZE = 4
 DEFAULT_NUM_SHARDS = 10
 
 

@@ -14,7 +14,6 @@ import torch.nn.functional as F
 
 
 MAX_SEQ_LEN = 2048
-TIME_BUDGET = 300
 DEFAULT_EVAL_TOKENS = 40 * 524288
 DEFAULT_NUM_SHARDS = 10
 
@@ -32,10 +31,14 @@ SPECIAL_TOKENS = [f"<|reserved_{i}|>" for i in range(4)]
 BOS_TOKEN = "<|reserved_0|>"
 
 WINDOW_PATTERN = "SSSL"
-DEPTH = 12
-N_HEAD = 6
-N_KV_HEAD = 6
-N_EMBD = 768
+#DEPTH = 12
+#N_HEAD = 6
+#N_KV_HEAD = 6
+#N_EMBD = 768
+DEPTH = 6
+N_HEAD = 3
+N_KV_HEAD = 3
+N_EMBD = 192
 
 
 def download_single_shard(index):
@@ -569,6 +572,7 @@ class NanochatLanguageModelFunction:
         if should_compile is None:
             should_compile = self.device.type == "cuda" and os.environ.get("RINGMASTER_TORCH_COMPILE", "0") == "1"
         if should_compile:
+            print("Compiling model...")
             self._model = torch.compile(self._model, dynamic=False)
 
         self._parameter_infos = self._build_parameter_infos()
