@@ -2,10 +2,8 @@ import heapq
 import numpy as np
 import torch
 from factory import Factory
-from function import OptimizationProblemMeta
 from signature import Signature
-from asynchronous.asynchronous_transport import DelayedAsynchronousTransport, RandomDelayedAsynchronousTransport
-from concurrent.futures import ProcessPoolExecutor
+from asynchronous.asynchronous_transport import DelayedAsynchronousTransport
 
 
 POLAR_EXPRESS_COEFFS = [
@@ -2882,7 +2880,7 @@ def _generate_seed(generator):
 def get_algorithm(functions, point, seed, 
                   algorithm_name, delays, 
                   algorithm_master_params={}, algorithm_node_params={},
-                  meta=OptimizationProblemMeta()):
+                  meta=None):
     node_name = algorithm_name + "_node"
     master_name = algorithm_name + "_master"
     node_cls = FactoryAsyncNode.get(node_name)
