@@ -6,6 +6,12 @@ The experiment models heterogeneous worker delays, measures progress by wall-clo
 
 ![NanoChat Ringmaster comparison](ringmaster_plot.png)
 
+## Paper
+
+The accompanying paper will be available on arXiv:
+
+**arXiv:** link coming soon
+
 ## What Is Included
 
 - `ringmaster.py`: main experiment runner for tuning and comparing asynchronous Muon methods.
@@ -111,4 +117,18 @@ Generated plots, traces, and tuning outputs are ignored by Git by default. The R
     `-- asynchronous
         |-- algorithm.py
         `-- asynchronous_transport.py
+```
+
+## Citation
+
+If you use this code, please cite the accompanying paper. The final BibTeX entry will be added once the arXiv version is available.
+
+```bibtex
+@article{param_free_ringmaster,
+  title   = {Param-Free Ringmaster},
+  author  = {TBD},
+  journal = {arXiv preprint},
+  year    = {2026},
+  url     = {TBD}
+}
 ```
