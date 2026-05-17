@@ -175,15 +175,14 @@ _minted*
 *.pyg
 
 # Local Nanochat/Ringmaster experiment outputs.
-__pycache__/
-*.py[cod]
-code/experiments/Figure_*.png
-code/experiments/nanochat_gradient_timing.json
-code/experiments/nesterov_quadratic_tuned_params_*.json
-code/experiments/ringmaster_muon_tuned_params_*.json
-code/experiments/ringmaster_nanochat_*.pdf
-code/experiments/ringmaster_nanochat_traces.json
-code/experiments/tuning_*_nanochat.pdf
+Figure_*.png
+nanochat_gradient_timing.json
+nesterov_quadratic_tuned_params_*.json
+ringmaster_muon_tuned_params_*.json
+ringmaster_nanochat_*.pdf
+ringmaster_nanochat_traces.json
+tuning_*_nanochat.pdf
+latex_files/
 code/latex_files/
 
 # morewrites
