@@ -16,16 +16,16 @@ import numpy as np
 import seaborn as sns
 import torch
 
-from asynchronous.algorithm import (
+from src.asynchronous.algorithm import (
     DelayAdaptiveMuonASGD,
     ParameterAgnosticRingmasterMuonASGD,
     RennalaMuonSGD,
     RingmasterMuonASGD,
     StochasticGradientNodeAlgorithm,
 )
-from asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
-from nanochat_async import DEPTH, NanochatLanguageModelFunction
-from signature import Signature
+from src.asynchronous.asynchronous_transport import RandomDelayedAsynchronousTransport
+from src.nanochat_async import DEPTH, NanochatLanguageModelFunction
+from src.signature import Signature
 
 
 sns.set(style="whitegrid", context="talk", font_scale=1.1, palette=sns.color_palette("bright"), color_codes=False)

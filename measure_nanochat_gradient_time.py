@@ -6,7 +6,7 @@ import time
 
 import torch
 
-from nanochat_async import NanochatLanguageModelFunction
+from src.nanochat_async import NanochatLanguageModelFunction
 
 
 DEFAULT_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "nanochat_gradient_timing.json")
