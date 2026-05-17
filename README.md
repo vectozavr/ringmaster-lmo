@@ -1,6 +1,6 @@
-# Param-Free Ringmaster
+# Ringmaster LMO
 
-Code for comparing Ringmaster-style asynchronous Muon optimization against other asynchronous Muon baselines on a small NanoChat language-model objective.
+Code for comparing the Ringmaster LMO asynchronous momentum method against other asynchronous Muon baselines on a small NanoChat language-model objective.
 
 The experiment models heterogeneous worker delays, measures progress by wall-clock runtime, and tracks the latest minibatch loss during training. The main comparison below shows Ringmaster Muon reaching lower loss faster than the other tested asynchronous Muon variants under increasing worker delays.
 
@@ -8,7 +8,7 @@ The experiment models heterogeneous worker delays, measures progress by wall-clo
 
 ## Paper
 
-The accompanying paper will be available on arXiv:
+The accompanying paper, **Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method**, will be available on arXiv:
 
 **arXiv:** link coming soon
 
@@ -124,8 +124,8 @@ Generated plots, traces, and tuning outputs are ignored by Git by default. The R
 If you use this code, please cite the accompanying paper. The final BibTeX entry will be added once the arXiv version is available.
 
 ```bibtex
-@article{param_free_ringmaster,
-  title   = {Param-Free Ringmaster},
+@article{ringmaster_lmo,
+  title   = {Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method},
   author  = {TBD},
   journal = {arXiv preprint},
   year    = {2026},
