@@ -1,5 +1,7 @@
 # Ringmaster LMO
 
+[![arXiv](https://img.shields.io/badge/arXiv-2605.18174-b31b1b.svg)](https://arxiv.org/abs/2605.18174)
+
 Code for comparing the Ringmaster LMO asynchronous momentum method against other asynchronous Muon baselines on a small NanoChat language-model objective.
 
 The experiment models heterogeneous worker delays, measures progress by wall-clock runtime, and tracks the latest minibatch loss during training. The main comparison below shows Ringmaster Muon reaching lower loss faster than the other tested asynchronous Muon variants under increasing worker delays.
@@ -8,10 +10,7 @@ The experiment models heterogeneous worker delays, measures progress by wall-clo
 
 ## Paper
 
-The accompanying paper is available on arXiv:
-
-**Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method**  
-[arXiv:2605.18174](https://arxiv.org/abs/2605.18174)
+📚 **Paper:** [Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method](https://arxiv.org/abs/2605.18174)
 
 ## What Is Included
 
