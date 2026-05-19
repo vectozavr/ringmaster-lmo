@@ -8,9 +8,10 @@ The experiment models heterogeneous worker delays, measures progress by wall-clo
 
 ## Paper
 
-The accompanying paper, **Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method**, will be available on arXiv:
+The accompanying paper is available on arXiv:
 
-**arXiv:** link coming soon
+**Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method**  
+[arXiv:2605.18174](https://arxiv.org/abs/2605.18174)
 
 ## What Is Included
 
@@ -121,14 +122,15 @@ Generated plots, traces, and tuning outputs are ignored by Git by default. The R
 
 ## Citation
 
-If you use this code, please cite the accompanying paper. The final BibTeX entry will be added once the arXiv version is available.
+If you use this code, please cite the accompanying paper.
 
 ```bibtex
 @article{ringmaster_lmo,
-  title   = {Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method},
-  author  = {TBD},
-  journal = {arXiv preprint},
-  year    = {2026},
-  url     = {TBD}
+  title         = {Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method},
+  author        = {Sadiev, Abdurakhmon and Maranjyan, Artavazd and Ilin, Ivan and Richtarik, Peter},
+  journal       = {arXiv preprint arXiv:2605.18174},
+  year          = {2026},
+  doi           = {10.48550/arXiv.2605.18174},
+  url           = {https://arxiv.org/abs/2605.18174}
 }
 ```
