@@ -124,12 +124,10 @@ Generated plots, traces, and tuning outputs are ignored by Git by default. The R
 If you use this code, please cite the accompanying paper.
 
 ```bibtex
-@article{ringmaster_lmo,
-  title         = {Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method},
-  author        = {Sadiev, Abdurakhmon and Maranjyan, Artavazd and Ilin, Ivan and Richtarik, Peter},
-  journal       = {arXiv preprint arXiv:2605.18174},
-  year          = {2026},
-  doi           = {10.48550/arXiv.2605.18174},
-  url           = {https://arxiv.org/abs/2605.18174}
+@article{sadiev2026ringmaster,
+  title={Ringmaster LMO: Asynchronous Linear Minimization Oracle Momentum Method},
+  author={Sadiev, Abdurakhmon and Maranjyan, Artavazd and Ilin, Ivan and Richt{\'a}rik, Peter},
+  journal={arXiv preprint arXiv:2605.18174},
+  year={2026}
 }
 ```
